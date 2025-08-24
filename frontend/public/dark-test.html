@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Mode Static Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen p-8">
+    <div class="max-w-2xl mx-auto space-y-6">
+        <h1 class="text-3xl font-bold">Static Dark Mode Test</h1>
+        
+        <div class="flex gap-4">
+            <button onclick="setLight()" class="px-4 py-2 bg-blue-500 text-white rounded">Light Mode</button>
+            <button onclick="setDark()" class="px-4 py-2 bg-gray-800 text-white rounded">Dark Mode</button>
+        </div>
+        
+        <div class="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <h2 class="text-xl font-semibold mb-2">Test Card</h2>
+            <p>This card should be light gray in light mode and dark gray in dark mode.</p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 bg-blue-100 dark:bg-blue-900 rounded">
+                <p class="text-blue-900 dark:text-blue-100">Blue themed box</p>
+            </div>
+            <div class="p-4 bg-green-100 dark:bg-green-900 rounded">
+                <p class="text-green-900 dark:text-green-100">Green themed box</p>
+            </div>
+        </div>
+        
+        <div class="p-4 border-2 border-gray-300 dark:border-gray-600 rounded">
+            <p>Border should be light in light mode, dark in dark mode</p>
+        </div>
+        
+        <div id="status" class="p-4 bg-yellow-100 dark:bg-yellow-900 rounded">
+            <p>Current HTML class: <span id="htmlClass" class="font-mono"></span></p>
+        </div>
+    </div>
+    
+    <script>
+        function updateStatus() {
+            document.getElementById('htmlClass').textContent = document.documentElement.className || '(none)';
+        }
+        
+        function setLight() {
+            document.documentElement.classList.remove('dark');
+            updateStatus();
+        }
+        
+        function setDark() {
+            document.documentElement.classList.add('dark');
+            updateStatus();
+        }
+        
+        // Initial status
+        updateStatus();
+    </script>
+</body>
+</html>

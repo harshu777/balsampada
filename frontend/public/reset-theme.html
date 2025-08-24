@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Theme Settings</title>
+</head>
+<body>
+    <h1>Theme Settings Reset</h1>
+    <button onclick="resetTheme()">Reset Theme to Light Mode</button>
+    <p id="status"></p>
+    
+    <script>
+        function resetTheme() {
+            // Clear all theme-related localStorage items
+            localStorage.removeItem('theme');
+            localStorage.removeItem('next-themes');
+            
+            // Clear all cookies that might store theme
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            document.getElementById('status').innerHTML = 'Theme reset! Please refresh the main page.';
+        }
+        
+        // Auto-reset on load
+        resetTheme();
+    </script>
+</body>
+</html>
