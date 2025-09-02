@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const classSchema = new mongoose.Schema({
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   title: {
     type: String,
     required: [true, 'Class title is required'],

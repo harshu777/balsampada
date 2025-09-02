@@ -64,7 +64,19 @@ export default function TeacherClassesPage() {
       toast.success('Class published successfully');
       fetchClasses();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to publish class');
+      const errorMessage = error.response?.data?.message || 'Failed to publish class';
+      toast.error(errorMessage);
+      
+      // If the error is about missing modules, provide guidance
+      if (errorMessage.includes('module')) {
+        toast('💡 Tip: Click Edit to add modules and lessons to your class', {
+          duration: 5000,
+          style: {
+            background: '#FEF3C7',
+            color: '#92400E',
+          },
+        });
+      }
     }
   };
 
@@ -309,6 +321,7 @@ export default function TeacherClassesPage() {
                           <button
                             onClick={() => handlePublish(classItem._id)}
                             className="text-green-600 hover:text-green-900"
+                            title="Add modules to your class before publishing"
                           >
                             Publish
                           </button>

@@ -32,11 +32,8 @@ api.interceptors.response.use(
       Cookies.remove('user');
       window.location.href = '/login';
       toast.error('Session expired. Please login again.');
-    } else if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
-    } else {
-      toast.error('An error occurred. Please try again.');
     }
+    // Don't show toast here, let the component handle it
     return Promise.reject(error);
   }
 );

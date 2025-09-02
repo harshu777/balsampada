@@ -15,7 +15,11 @@ import {
   DollarSign,
   Users,
   FileText,
-  Image
+  Image,
+  Video,
+  Link as LinkIcon,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import {
   BOARDS,
@@ -29,6 +33,7 @@ import {
   getCurrentAcademicYear,
   getScheduleSuggestions
 } from '@/constants/education';
+import { generateGoogleMeetLink, isValidGoogleMeetLink } from '@/utils/meetingHelper';
 
 interface ClassFormData {
   // Basic Information
@@ -52,6 +57,10 @@ interface ClassFormData {
   endDate: string;
   schedule: string; // e.g., "Mon, Wed, Fri - 4:00 PM to 5:30 PM"
   
+  // Meeting Details
+  meetingLink: string;
+  autoGenerateMeeting: boolean;
+  
   // Pricing
   price: number;
   discountPrice?: number;
@@ -66,6 +75,18 @@ interface ClassFormData {
   syllabus: string;
   thumbnail?: string;
 }
+
+// Helper function to format date nicely
+const formatDateDisplay = (dateString: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+};
 
 export default function CreateClassPage() {
   const router = useRouter();
@@ -88,6 +109,8 @@ export default function CreateClassPage() {
     startDate: '',
     endDate: '',
     schedule: '',
+    meetingLink: '',
+    autoGenerateMeeting: true,
     price: 0,
     discountPrice: undefined,
     maxStudents: 30,
@@ -128,7 +151,7 @@ export default function CreateClassPage() {
     if (formData.startDate && formData.duration) {
       const start = new Date(formData.startDate);
       const end = new Date(start);
-      end.setDate(end.getDate() + (formData.duration * 7)); // duration is in weeks
+      end.setDate(end.getDate() + (formData.duration * 7) - 1); // duration is in weeks, -1 for inclusive
       setFormData(prev => ({ ...prev, endDate: end.toISOString().split('T')[0] }));
     }
   }, [formData.startDate, formData.duration]);
@@ -140,10 +163,18 @@ export default function CreateClassPage() {
       setAutoTitle(false); // Disable auto-title if user manually edits
     }
     
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value
-    }));
+    // Handle duration as number even though it comes from select
+    if (name === 'duration') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: Number(value)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'number' ? Number(value) : value
+      }));
+    }
   };
 
   const handleScheduleSuggestion = (suggestion: any) => {
@@ -465,6 +496,31 @@ export default function CreateClassPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Course Duration (weeks) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="duration"
+                  value={formData.duration}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="4">4 weeks (1 month)</option>
+                  <option value="8">8 weeks (2 months)</option>
+                  <option value="12">12 weeks (3 months)</option>
+                  <option value="16">16 weeks (4 months)</option>
+                  <option value="20">20 weeks (5 months)</option>
+                  <option value="24">24 weeks (6 months)</option>
+                  <option value="36">36 weeks (9 months)</option>
+                  <option value="48">48 weeks (12 months)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select how long your course will run
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Start Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -472,24 +528,48 @@ export default function CreateClassPage() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleInputChange}
+                  min={new Date().toISOString().split('T')[0]}
+                  max={`${new Date().getFullYear() + 1}-12-31`}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  When will the first class begin?
+                </p>
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Duration (weeks) <span className="text-red-500">*</span>
+                  End Date <span className="text-sm font-normal text-gray-500">(Automatically calculated)</span>
                 </label>
-                <input
-                  type="number"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  min="1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    onChange={handleInputChange}
+                    min={formData.startDate || new Date().toISOString().split('T')[0]}
+                    max={`${new Date().getFullYear() + 1}-12-31`}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700"
+                    readOnly
+                  />
+                  {formData.startDate && formData.duration && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                        Auto-calculated: {formData.duration} weeks from start
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  <Info className="h-3 w-3 inline mr-1" />
+                  End date is automatically set based on your selected duration. The course will run for {formData.duration} weeks from the start date.
+                  {formData.startDate && formData.endDate && (
+                    <span className="block mt-1 text-gray-600">
+                      Course period: {formatDateDisplay(formData.startDate)} to {formatDateDisplay(formData.endDate)}
+                    </span>
+                  )}
+                </p>
               </div>
 
               <div>
@@ -554,6 +634,99 @@ export default function CreateClassPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Google Meet Integration */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Video className="h-5 w-5 mr-2" />
+              Online Meeting Setup
+            </h2>
+
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  id="autoGenerateMeeting"
+                  checked={formData.autoGenerateMeeting}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData(prev => ({
+                      ...prev,
+                      autoGenerateMeeting: checked,
+                      meetingLink: checked ? generateGoogleMeetLink(formData.title) : prev.meetingLink
+                    }));
+                  }}
+                  className="mt-1"
+                />
+                <label htmlFor="autoGenerateMeeting" className="text-sm">
+                  <span className="font-medium text-gray-900">Auto-generate Google Meet link</span>
+                  <p className="text-gray-500 text-xs mt-1">
+                    We'll create a meeting link for you. You can also create your own in Google Meet and paste it below.
+                  </p>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Google Meet Link <span className="text-red-500">*</span>
+                </label>
+                <div className="flex space-x-2">
+                  <div className="flex-1 relative">
+                    <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      name="meetingLink"
+                      value={formData.meetingLink}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                      required
+                    />
+                  </div>
+                  {formData.meetingLink && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(formData.meetingLink);
+                        toast.success('Meeting link copied!');
+                      }}
+                      className="p-2 text-gray-600 hover:text-blue-600 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+                      title="Copy link"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  )}
+                  {formData.meetingLink && (
+                    <a
+                      href={formData.meetingLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-gray-600 hover:text-blue-600 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+                      title="Test link"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+                {formData.meetingLink && !isValidGoogleMeetLink(formData.meetingLink) && (
+                  <p className="text-xs text-yellow-600 mt-1">
+                    <Info className="h-3 w-3 inline mr-1" />
+                    Make sure this is a valid Google Meet link
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">How to use Google Meet:</h4>
+                <ol className="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                  <li>Share the meeting link with your students after enrollment</li>
+                  <li>Students can join the class by clicking the link at scheduled time</li>
+                  <li>No software installation required - works in browser</li>
+                  <li>Free for up to 60 minutes per session with 100 participants</li>
+                </ol>
               </div>
             </div>
           </div>

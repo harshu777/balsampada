@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GraduationCap, Users, ArrowRight, BookOpen, School } from 'lucide-react';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,7 +21,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center">
@@ -196,5 +198,6 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+    </PageLayout>
   );
 }

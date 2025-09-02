@@ -7,7 +7,8 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { 
   BookOpen, Users, Star, DollarSign, Calendar, Clock, 
-  Globe, Tag, ChevronRight, Edit, Eye, Trash2, Plus
+  Globe, Tag, ChevronRight, Edit, Eye, Trash2, Plus,
+  Video, Link as LinkIcon, Copy, ExternalLink
 } from 'lucide-react';
 import { formatDate, formatCurrency } from '@/lib/utils';
 
@@ -38,6 +39,10 @@ interface ClassDetails {
   prerequisites: string[];
   learningObjectives: string[];
   syllabusDescription?: string;
+  startDate?: string;
+  endDate?: string;
+  schedule?: string;
+  meetingLink?: string;
   createdAt: string;
   publishedAt?: string;
 }
@@ -48,6 +53,14 @@ export default function TeacherClassView() {
   const [classData, setClassData] = useState<ClassDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'modules' | 'students'>('overview');
+
+  const isClassLive = (startDate?: string, endDate?: string) => {
+    if (!startDate) return false;
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date(start.getTime() + 90 * 60000);
+    return now >= start && now <= end;
+  };
 
   useEffect(() => {
     fetchClassDetails();
@@ -114,6 +127,12 @@ export default function TeacherClassView() {
                 }`}>
                   {classData.status}
                 </span>
+                {isClassLive(classData.startDate, classData.endDate) && (
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 flex items-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1"></span>
+                    LIVE NOW
+                  </span>
+                )}
                 <span>{classData.board} • {classData.standard} • {classData.subject}</span>
                 <span>{classData.batch} Batch • {classData.academicYear}</span>
               </div>
@@ -294,6 +313,78 @@ export default function TeacherClassView() {
                     </dl>
                   </div>
                 </div>
+
+                {/* Schedule & Meeting Section */}
+                {(classData.startDate || classData.schedule || classData.meetingLink) && (
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Schedule & Meeting Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {classData.startDate && (
+                        <div className="flex items-start space-x-3">
+                          <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Class Duration</p>
+                            <p className="text-sm text-gray-600">
+                              {formatDate(classData.startDate)}
+                              {classData.endDate && ` - ${formatDate(classData.endDate)}`}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {classData.schedule && (
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="w-5 h-5 text-green-600 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Schedule</p>
+                            <p className="text-sm text-gray-600">{classData.schedule}</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {classData.meetingLink && (
+                        <div className="md:col-span-2">
+                          <div className="flex items-start space-x-3">
+                            <Video className="w-5 h-5 text-purple-600 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700 mb-2">Google Meet Link</p>
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={classData.meetingLink}
+                                  readOnly
+                                  className="flex-1 px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md text-gray-700"
+                                />
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(classData.meetingLink!);
+                                    toast.success('Meeting link copied!');
+                                  }}
+                                  className="p-1.5 text-gray-600 hover:text-blue-600 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+                                  title="Copy link"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                                <a
+                                  href={classData.meetingLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 text-gray-600 hover:text-blue-600 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+                                  title="Open meeting"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {classData.syllabusDescription && (
                   <div>

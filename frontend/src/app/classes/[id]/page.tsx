@@ -7,6 +7,7 @@ import Image from 'next/image';
 import api from '@/lib/api';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import PageLayout from '@/components/layout/PageLayout';
 import {
   ClockIcon,
   UserIcon,
@@ -66,6 +67,7 @@ interface ClassDetails {
   standard?: string;
   subject?: string;
   price: number;
+  discountPrice?: number;
   duration: number;
   teacher: {
     _id: string;
@@ -142,9 +144,13 @@ export default function ClassDetailsPage() {
     
     try {
       const response = await api.get('/enrollments/my-enrollments');
-      const enrolled = response.data.data.some((enrollment: any) => 
-        enrollment.classId?._id === params.id || enrollment.classId === params.id
-      );
+      
+      const enrolled = response.data.data.some((enrollment: any) => {
+        // Check both class and classId fields as the API might use either
+        const classId = enrollment.class?._id || enrollment.class || enrollment.classId?._id || enrollment.classId;
+        return classId === params.id;
+      });
+      
       setIsEnrolled(enrolled);
     } catch (error) {
       console.error('Error checking enrollment:', error);
@@ -204,7 +210,8 @@ export default function ClassDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <PageLayout>
+        <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
@@ -219,12 +226,14 @@ export default function ClassDetailsPage() {
           </div>
         </div>
       </div>
+      </PageLayout>
     );
   }
 
   if (!classDetails) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <PageLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Class not found</h2>
           <Link href="/classes" className="text-blue-600 hover:text-blue-700">
@@ -232,11 +241,13 @@ export default function ClassDetailsPage() {
           </Link>
         </div>
       </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PageLayout>
+      <div className="min-h-screen bg-gray-50">
 
       {/* Hero Section with Breadcrumb */}
       <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-900 text-white relative overflow-hidden">
@@ -708,21 +719,45 @@ export default function ClassDetailsPage() {
                 </div>
                 
                 <div className="p-6">
-                  {/* Price */}
-                  <div className="flex items-baseline justify-center mb-6">
-                    <span className="text-4xl font-bold text-gray-900">₹{classDetails.price}</span>
-                    <span className="text-gray-500 ml-2">/month</span>
-                  </div>
+                  {/* Price or Enrollment Status */}
+                  {isEnrolled ? (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-center text-green-600 mb-2">
+                        <CheckCircleIcon className="w-8 h-8 mr-2" />
+                        <span className="text-xl font-semibold">You are enrolled!</span>
+                      </div>
+                      <p className="text-sm text-gray-600 text-center">
+                        Access your classes from the dashboard
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      {classDetails.discountPrice && classDetails.discountPrice < classDetails.price && (
+                        <div className="flex justify-center mb-2">
+                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                            {Math.round(((classDetails.price - classDetails.discountPrice) / classDetails.price) * 100)}% OFF
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-baseline justify-center mb-6">
+                        {classDetails.discountPrice && classDetails.discountPrice < classDetails.price ? (
+                          <>
+                            <span className="text-4xl font-bold text-gray-900">₹{classDetails.discountPrice}</span>
+                            <span className="text-xl text-gray-500 line-through ml-3">₹{classDetails.price}</span>
+                            <span className="text-gray-500 ml-2">/month</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-4xl font-bold text-gray-900">₹{classDetails.price}</span>
+                            <span className="text-gray-500 ml-2">/month</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Enroll Button */}
-                  {isEnrolled ? (
-                    <button
-                      onClick={() => router.push('/dashboard')}
-                      className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition shadow-lg"
-                    >
-                      Go to Dashboard
-                    </button>
-                  ) : classDetails.status !== 'published' ? (
+                  {classDetails.status !== 'published' ? (
                     <div className="space-y-2">
                       <button
                         disabled
@@ -736,11 +771,15 @@ export default function ClassDetailsPage() {
                     </div>
                   ) : (
                     <button
-                      onClick={handleEnrollment}
-                      disabled={enrolling}
-                      className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                      onClick={isEnrolled ? undefined : handleEnrollment}
+                      disabled={enrolling || isEnrolled}
+                      className={`w-full py-3 text-white rounded-lg font-semibold transition shadow-lg ${
+                        isEnrolled 
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
                     >
-                      {enrolling ? 'Enrolling...' : 'Enroll Now'}
+                      {isEnrolled ? 'Already Enrolled' : enrolling ? 'Enrolling...' : 'Enroll Now'}
                     </button>
                   )}
 
@@ -831,5 +870,6 @@ export default function ClassDetailsPage() {
         </div>
       </div>
     </div>
+    </PageLayout>
   );
 }

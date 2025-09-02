@@ -10,7 +10,9 @@ import {
   TrendingUp,
   PlusCircle,
   ChevronRight,
-  Clock
+  Clock,
+  Calendar,
+  CreditCard
 } from 'lucide-react';
 import api from '@/lib/api';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
@@ -24,7 +26,11 @@ interface DashboardData {
     total: number;
     thisMonth: number;
     totalTransactions: number;
+    pendingAmount: number;
   };
+  studyMaterialsCount: number;
+  totalAssignments: number;
+  pendingPayments: number;
 }
 
 export default function TeacherDashboard() {
@@ -72,7 +78,7 @@ export default function TeacherDashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -125,7 +131,7 @@ export default function TeacherDashboard() {
                     Total Earnings
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    {formatCurrency(data?.earnings.total || 0)}
+                    ₹{data?.earnings.total || 0}
                   </dd>
                 </dl>
               </div>
@@ -145,12 +151,81 @@ export default function TeacherDashboard() {
                     This Month
                   </dt>
                   <dd className="text-2xl font-semibold text-gray-900">
-                    {formatCurrency(data?.earnings.thisMonth || 0)}
+                    ₹{data?.earnings.thisMonth || 0}
                   </dd>
                 </dl>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Clock className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Pending Payments
+                  </dt>
+                  <dd className="text-2xl font-semibold text-gray-900">
+                    {data?.pendingPayments || 0}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mt-6 mb-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Link
+            href="/teacher/classes/create"
+            className="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition"
+          >
+            <PlusCircle className="h-5 w-5 mr-2" />
+            Create Class
+          </Link>
+          <Link
+            href="/teacher/payments"
+            className="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 transition"
+          >
+            <CreditCard className="h-5 w-5 mr-2" />
+            Payments
+          </Link>
+          <Link
+            href="/teacher/assignments/create"
+            className="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 transition"
+          >
+            <FileText className="h-5 w-5 mr-2" />
+            Assignment
+          </Link>
+          <Link
+            href="/teacher/study-materials/upload"
+            className="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 transition"
+          >
+            <BookOpen className="h-5 w-5 mr-2" />
+            Material
+          </Link>
+          <Link
+            href="/teacher/schedule-extra"
+            className="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 transition"
+          >
+            <Calendar className="h-5 w-5 mr-2" />
+            Extra Class
+          </Link>
+          <Link
+            href="/schedule"
+            className="flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition"
+          >
+            <Clock className="h-5 w-5 mr-2" />
+            Schedule
+          </Link>
         </div>
       </div>
 
@@ -246,8 +321,12 @@ export default function TeacherDashboard() {
                     <p className="text-xs text-gray-500">
                       {formatDateTime(submission.submittedAt)}
                     </p>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                      Pending Review
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      submission.status === 'graded' 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {submission.status === 'graded' ? `Graded (${submission.grade})` : 'Pending Review'}
                     </span>
                   </div>
                 </div>
@@ -257,6 +336,44 @@ export default function TeacherDashboard() {
                   <p className="text-sm text-gray-500">No recent submissions</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Study Materials Section */}
+      <div className="bg-white shadow rounded-lg mt-6">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Study Materials</h3>
+            <Link
+              href="/teacher/study-materials"
+              className="text-sm text-blue-600 hover:text-blue-500 flex items-center"
+            >
+              View all
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              href="/teacher/study-materials/upload"
+              className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition"
+            >
+              <BookOpen className="h-5 w-5 mr-2 text-gray-400" />
+              <span className="text-sm text-gray-600">Upload New Material</span>
+            </Link>
+            <Link
+              href="/teacher/study-materials"
+              className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-teal-50 to-teal-100 rounded-lg hover:from-teal-100 hover:to-teal-200 transition"
+            >
+              <FileText className="h-5 w-5 mr-2 text-teal-600" />
+              <span className="text-sm text-teal-700">Manage Materials</span>
+            </Link>
+            <div className="flex items-center justify-center px-4 py-3 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{data?.studyMaterialsCount || 0}</p>
+                <p className="text-xs text-gray-500">Total Materials</p>
+              </div>
             </div>
           </div>
         </div>

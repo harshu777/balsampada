@@ -414,3 +414,88 @@ exports.refreshToken = async (req, res, next) => {
     });
   }
 };
+
+// Google OAuth callback
+exports.googleCallback = async (req, res) => {
+  try {
+    const user = req.user;
+    
+    if (!user) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+    }
+
+    // Generate JWT token
+    const token = user.getSignedJwtToken();
+    
+    // Check if profile is incomplete
+    if (user.profileIncomplete) {
+      // Redirect to profile completion page with token
+      return res.redirect(`${process.env.FRONTEND_URL}/complete-profile?token=${token}`);
+    }
+
+    // Profile is complete, redirect to dashboard
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${token}`);
+  } catch (error) {
+    console.error('Google callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+  }
+};
+
+// Complete profile after Google OAuth
+exports.completeProfile = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { role, phone, dateOfBirth, address, grade, board, subject, qualification, experience, bio } = req.body;
+
+    if (!role || !['student', 'teacher'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid role (student or teacher) is required'
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update user profile
+    user.role = role;
+    user.phone = phone;
+    user.dateOfBirth = dateOfBirth;
+    user.address = address;
+    
+    // Role-specific fields
+    if (role === 'student') {
+      if (grade) user.grade = grade;
+      if (board) user.board = board;
+    } else if (role === 'teacher') {
+      if (subject) user.subject = subject;
+      if (qualification) user.qualification = qualification;
+      if (experience) user.experience = experience;
+      if (bio) user.bio = bio;
+    }
+
+    user.profileIncomplete = false;
+    await user.save();
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    console.error('Complete profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error completing profile'
+    });
+  }
+};

@@ -1,25 +1,47 @@
 const Enrollment = require('../models/Enrollment');
 const Class = require('../models/Class');
 const User = require('../models/User');
+const NotificationService = require('../services/notificationService');
+const { paginate, paginateResponse } = require('../utils/pagination');
 
 exports.enrollInClass = async (req, res) => {
   try {
     const { classId } = req.params;
-    const studentId = req.user.id;
+    const studentId = req.user._id.toString();
+    
+    console.log('Enrollment attempt:', { 
+      classId, 
+      studentId, 
+      userRole: req.user.role,
+      userName: req.user.name 
+    });
 
-    const classItem = await Class.findById(classId);
+    const classItem = await Class.findOne({
+      _id: classId,
+      organization: req.organizationId
+    });
     if (!classItem) {
+      console.log('Class not found:', classId);
       return res.status(404).json({
         success: false,
         message: 'Class not found'
       });
     }
+    
+    console.log('Class found:', { 
+      id: classItem._id, 
+      status: classItem.status, 
+      isActive: classItem.isActive,
+      enrolledCount: classItem.enrolledStudents.length,
+      maxStudents: classItem.maxStudents
+    });
 
     // Check enrollment eligibility with detailed error messages
     if (classItem.status !== 'published') {
+      console.log('Class not published:', classItem.status);
       return res.status(400).json({
         success: false,
-        message: 'This class is not yet published. Please contact the teacher.'
+        message: `This class is not yet published. Current status: ${classItem.status}. Please contact the teacher.`
       });
     }
     
@@ -44,36 +66,75 @@ exports.enrollInClass = async (req, res) => {
       });
     }
 
+    // Check if user is a student
+    if (req.user.role !== 'student') {
+      console.log('User is not a student:', req.user.role);
+      return res.status(400).json({
+        success: false,
+        message: 'Only students can enroll in classes'
+      });
+    }
+    
     const existingEnrollment = await Enrollment.findOne({
       student: studentId,
-      class: classId
+      class: classId,
+      organization: req.organizationId
     });
 
     if (existingEnrollment) {
+      console.log('Already enrolled:', { studentId, classId });
       return res.status(400).json({
         success: false,
-        message: 'Already enrolled in this class'
+        message: 'You are already enrolled in this class'
       });
     }
 
+    console.log('Creating enrollment with:', {
+      student: studentId,
+      class: classId,
+      price: classItem.price
+    });
+    
     const enrollment = await Enrollment.create({
       student: studentId,
       class: classId,
+      organization: req.organizationId,
       payment: {
-        amount: classItem.discountPrice || classItem.price,
+        amount: classItem.discountPrice || classItem.price || 0,
         status: req.body.paymentStatus || 'pending'
       }
     });
+    
+    console.log('Enrollment created:', enrollment._id);
 
-    classItem.enrolledStudents.push(studentId);
-    await classItem.save();
+    // Update class with enrolled student
+    if (!classItem.enrolledStudents) {
+      classItem.enrolledStudents = [];
+    }
+    if (!classItem.enrolledStudents.includes(studentId)) {
+      classItem.enrolledStudents.push(studentId);
+      await classItem.save();
+    }
 
+    // Update user with enrolled class
     const user = await User.findById(studentId);
+    if (!user.enrolledClasses) {
+      user.enrolledClasses = [];
+    }
     user.enrolledClasses.push(enrollment._id);
     await user.save();
 
     await enrollment.populate('class', 'title description teacher');
     await enrollment.populate('student', 'name email');
+
+    // Send notification to teacher about new enrollment
+    await NotificationService.notifyClassEnrollment(
+      classId,
+      studentId,
+      classItem.teacher,
+      classItem.title,
+      user.name
+    );
 
     res.status(201).json({
       success: true,
@@ -91,7 +152,8 @@ exports.enrollInClass = async (req, res) => {
 exports.getMyEnrollments = async (req, res) => {
   try {
     const enrollments = await Enrollment.find({ 
-      student: req.user.id 
+      student: req.user.id,
+      organization: req.organizationId
     })
     .populate('class', 'title description thumbnail teacher category level')
     .populate({
@@ -118,7 +180,10 @@ exports.getMyEnrollments = async (req, res) => {
 
 exports.getEnrollment = async (req, res) => {
   try {
-    const enrollment = await Enrollment.findById(req.params.id)
+    const enrollment = await Enrollment.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    })
       .populate('class')
       .populate('student', 'name email avatar');
 
@@ -157,7 +222,8 @@ exports.updateProgress = async (req, res) => {
     
     const enrollment = await Enrollment.findOne({
       student: req.user.id,
-      class: req.params.classId
+      class: req.params.classId,
+      organization: req.organizationId
     });
 
     if (!enrollment) {
@@ -203,7 +269,8 @@ exports.markAttendance = async (req, res) => {
     
     const enrollment = await Enrollment.findOne({
       student: studentId,
-      class: req.params.classId
+      class: req.params.classId,
+      organization: req.organizationId
     });
 
     if (!enrollment) {
@@ -271,7 +338,8 @@ exports.getAttendance = async (req, res) => {
 exports.getClassEnrollments = async (req, res) => {
   try {
     const enrollments = await Enrollment.find({ 
-      class: req.params.classId 
+      class: req.params.classId,
+      organization: req.organizationId
     })
     .populate('student', 'name email avatar phone')
     .sort('-enrollmentDate');
@@ -293,7 +361,8 @@ exports.dropClass = async (req, res) => {
   try {
     const enrollment = await Enrollment.findOne({
       student: req.user.id,
-      class: req.params.classId
+      class: req.params.classId,
+      organization: req.organizationId
     });
 
     if (!enrollment) {
@@ -306,7 +375,10 @@ exports.dropClass = async (req, res) => {
     enrollment.status = 'dropped';
     await enrollment.save();
 
-    const classItem = await Class.findById(req.params.classId);
+    const classItem = await Class.findOne({
+      _id: req.params.classId,
+      organization: req.organizationId
+    });
     classItem.enrolledStudents.pull(req.user.id);
     await classItem.save();
 
@@ -363,6 +435,240 @@ exports.generateCertificate = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error generating certificate'
+    });
+  }
+};
+
+// Get all students enrolled in teacher's classes
+exports.getTeacherStudents = async (req, res) => {
+  try {
+    // Find all classes taught by this teacher
+    const classes = await Class.find({ 
+      teacher: req.user.id,
+      organization: req.organizationId
+    });
+    const classIds = classes.map(c => c._id);
+
+    // Find all enrollments for these classes
+    const enrollments = await Enrollment.find({
+      class: { $in: classIds },
+      organization: req.organizationId,
+      status: { $in: ['enrolled', 'active'] }
+    })
+      .populate('student', 'name email phone avatar lastLogin')
+      .populate('class', 'title')
+      .sort('-enrollmentDate');
+
+    // Group students and aggregate their data
+    const studentMap = new Map();
+    
+    enrollments.forEach(enrollment => {
+      const studentId = enrollment.student._id.toString();
+      
+      if (!studentMap.has(studentId)) {
+        studentMap.set(studentId, {
+          _id: studentId,
+          user: enrollment.student,
+          enrolledClasses: [],
+          totalProgress: 0,
+          totalAssignments: 0,
+          totalGradedAssignments: 0,
+          totalScore: 0,
+          enrollmentDates: []
+        });
+      }
+      
+      const studentData = studentMap.get(studentId);
+      studentData.enrolledClasses.push({
+        _id: enrollment.class._id,
+        title: enrollment.class.title,
+        progress: enrollment.progress?.percentageComplete || 0
+      });
+      
+      studentData.totalProgress += enrollment.progress?.percentageComplete || 0;
+      
+      // Aggregate assignment data
+      if (enrollment.grades?.assignments) {
+        studentData.totalAssignments += enrollment.grades.assignments.length;
+        enrollment.grades.assignments.forEach(assignment => {
+          if (assignment.score !== undefined) {
+            studentData.totalGradedAssignments++;
+            studentData.totalScore += (assignment.score / assignment.maxScore) * 100;
+          }
+        });
+      }
+      
+      studentData.enrollmentDates.push(enrollment.enrollmentDate);
+    });
+
+    // Format the response
+    const students = Array.from(studentMap.values()).map(student => ({
+      _id: student._id,
+      user: student.user,
+      enrollmentDate: Math.min(...student.enrollmentDates), // Earliest enrollment
+      enrolledClasses: student.enrolledClasses,
+      progress: {
+        percentageComplete: student.enrolledClasses.length > 0 
+          ? Math.round(student.totalProgress / student.enrolledClasses.length)
+          : 0,
+        completedLessons: 0,
+        totalLessons: 0
+      },
+      assignments: {
+        submitted: student.totalAssignments,
+        graded: student.totalGradedAssignments,
+        averageGrade: student.totalGradedAssignments > 0
+          ? Math.round(student.totalScore / student.totalGradedAssignments)
+          : 0
+      },
+      lastActivity: student.user.lastLogin
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: students
+    });
+  } catch (error) {
+    console.error('Get teacher students error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching students'
+    });
+  }
+};
+// Update payment status for an enrollment (Teacher/Admin only)
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { enrollmentId } = req.params;
+    const { status, amount, paymentMethod, transactionId, notes } = req.body;
+
+    // Validate payment status
+    const validStatuses = ["pending", "paid", "partial", "refunded", "waived"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid payment status. Must be one of: ${validStatuses.join(", ")}`
+      });
+    }
+
+    // Find enrollment and check permissions
+    const enrollment = await Enrollment.findById(enrollmentId)
+      .populate("class", "teacher title price discountPrice")
+      .populate("student", "name email phone");
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: "Enrollment not found"
+      });
+    }
+
+    // Check if user is the teacher of this class or admin
+    const isTeacher = enrollment.class.teacher.toString() === req.user.id;
+    const isAdmin = req.user.role === "admin";
+    
+    if (!isTeacher && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update payment status"
+      });
+    }
+
+    // Update payment information
+    enrollment.payment.status = status;
+    
+    if (status === "paid" || status === "partial") {
+      enrollment.payment.paymentDate = new Date();
+      enrollment.payment.paidAmount = amount || enrollment.class.discountPrice || enrollment.class.price;
+      enrollment.payment.paymentMethod = paymentMethod || "cash";
+      enrollment.payment.transactionId = transactionId || `CASH-${Date.now()}`;
+    }
+
+    // Add note if provided
+    if (notes) {
+      enrollment.notes.push({
+        content: `Payment ${status}: ${notes}`,
+        createdBy: req.user.id,
+        createdAt: new Date()
+      });
+    }
+
+    await enrollment.save();
+
+    // Send notification to student
+    if (status === "paid") {
+      await NotificationService.createNotification({
+        recipient: enrollment.student._id,
+        type: "payment",
+        title: "Payment Approved",
+        message: `Your payment for ${enrollment.class.title} has been approved.`,
+        data: {
+          enrollmentId: enrollment._id,
+          classId: enrollment.class._id
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Payment status updated to ${status}`,
+      data: enrollment
+    });
+  } catch (error) {
+    console.error("Update payment status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating payment status"
+    });
+  }
+};
+
+// Get enrollments with pending payments (Teacher/Admin only)
+exports.getPendingPayments = async (req, res) => {
+  try {
+    let query = {
+      "payment.status": "pending",
+      organization: req.organizationId
+    };
+
+    // If teacher, only show their class enrollments
+    if (req.user.role === "teacher") {
+      const teacherClasses = await Class.find({ 
+        teacher: req.user.id,
+        organization: req.organizationId
+      }).select("_id");
+      
+      const classIds = teacherClasses.map(c => c._id);
+      query.class = { $in: classIds };
+    }
+
+    const enrollments = await Enrollment.find(query)
+      .populate("student", "name email phone")
+      .populate("class", "title price discountPrice teacher")
+      .sort("-createdAt");
+
+    const pendingPayments = enrollments.map(enrollment => ({
+      _id: enrollment._id,
+      student: enrollment.student,
+      class: {
+        _id: enrollment.class._id,
+        title: enrollment.class.title,
+        price: enrollment.class.discountPrice || enrollment.class.price
+      },
+      enrollmentDate: enrollment.enrollmentDate,
+      payment: enrollment.payment,
+      status: enrollment.status
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: pendingPayments
+    });
+  } catch (error) {
+    console.error("Get pending payments error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching pending payments"
     });
   }
 };

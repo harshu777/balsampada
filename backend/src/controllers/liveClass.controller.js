@@ -5,8 +5,11 @@ const { validationResult } = require('express-validator');
 // Create a new live class
 exports.createLiveClass = async (req, res) => {
   try {
+    console.log('Live class creation request:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -24,8 +27,19 @@ exports.createLiveClass = async (req, res) => {
       recurringPattern 
     } = req.body;
 
+    // Check if classId is provided
+    if (!classId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Class ID is required'
+      });
+    }
+
     // Check if class exists and teacher owns it
-    const classItem = await Class.findById(classId);
+    const classItem = await Class.findOne({
+      _id: classId,
+      organization: req.organizationId
+    });
     if (!classItem) {
       return res.status(404).json({
         success: false,
@@ -40,19 +54,42 @@ exports.createLiveClass = async (req, res) => {
       });
     }
 
-    // Generate meeting URL (in production, integrate with Zoom/Google Meet API)
-    const meetingId = `meeting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const meetingUrl = `https://meet.balsampada.com/${meetingId}`;
-    const password = Math.random().toString(36).substr(2, 8);
+    // Use provided meeting URL or generate a default one
+    let finalMeetingUrl = req.body.meetingUrl;
+    let meetingId = '';
+    let password = '';
+    
+    if (!finalMeetingUrl) {
+      // Generate default meeting URL if not provided
+      // For development, use Google Meet or generate a placeholder
+      meetingId = `meeting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Use Jitsi Meet - FREE and works instantly without any setup!
+      // The meeting room is created automatically when someone clicks the link
+      finalMeetingUrl = `https://meet.jit.si/balsampada-${meetingId}`;
+      
+      // Alternative: Google Meet (teachers must manually create and provide links)
+      // finalMeetingUrl = `https://meet.google.com/abc-defg-hij`; // Requires real Google Meet link
+      
+      // Alternative: Custom local solution
+      // finalMeetingUrl = `http://localhost:3001/meeting/${meetingId}`;
+      
+      password = Math.random().toString(36).substr(2, 8);
+    } else {
+      // Extract meeting ID from provided URL if possible
+      const urlParts = finalMeetingUrl.split('/');
+      meetingId = urlParts[urlParts.length - 1] || `custom_${Date.now()}`;
+    }
 
     const liveClass = await LiveClass.create({
       title,
       description,
       class: classId,
       teacher: req.user.id,
+      organization: req.organizationId,
       scheduledAt,
       duration: duration || 60,
-      meetingUrl,
+      meetingUrl: finalMeetingUrl,
       meetingId,
       password,
       maxAttendees: maxAttendees || 100,
@@ -63,15 +100,26 @@ exports.createLiveClass = async (req, res) => {
     await liveClass.populate('teacher', 'name email');
     await liveClass.populate('class', 'title');
 
+    // Generate recurring classes if needed
+    let allClasses = [liveClass];
+    if (isRecurring && recurringPattern) {
+      const recurringClasses = await generateRecurringClasses(liveClass, recurringPattern);
+      allClasses = [liveClass, ...recurringClasses];
+    }
+
     res.status(201).json({
       success: true,
-      data: liveClass
+      data: liveClass,
+      recurringClassesCount: allClasses.length - 1
     });
   } catch (error) {
     console.error('Error creating live class:', error);
+    console.error('Error details:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error creating live class'
+      message: 'Error creating live class',
+      error: error.message
     });
   }
 };
@@ -80,7 +128,7 @@ exports.createLiveClass = async (req, res) => {
 exports.getLiveClasses = async (req, res) => {
   try {
     const { classId, status, upcoming } = req.query;
-    const query = {};
+    const query = { organization: req.organizationId };
 
     // Filter by class if specified
     if (classId) {
@@ -102,16 +150,47 @@ exports.getLiveClasses = async (req, res) => {
     if (req.user.role === 'teacher') {
       query.teacher = req.user.id;
     } else if (req.user.role === 'student') {
-      // Get enrolled classs for student
-      const user = await req.user.populate('enrolledClasss');
-      const enrolledClassIds = user.enrolledClasss.map(c => c._id);
-      query.class = { $in: enrolledClassIds };
+      // Get enrolled classes for student from Enrollment model
+      const Enrollment = require('../models/Enrollment');
+      const enrollments = await Enrollment.find({ 
+        student: req.user.id,
+        organization: req.organizationId,
+        status: { $in: ['active', 'enrolled'] }
+      }).select('class');
+      
+      console.log(`Student ${req.user.name} (${req.user.id}) enrollments:`, enrollments.length);
+      console.log('Enrollment details:', enrollments);
+      
+      const enrolledClassIds = enrollments.map(e => e.class);
+      console.log('Enrolled class IDs:', enrolledClassIds);
+      
+      // Only filter by enrolled classes if student has enrollments
+      if (enrolledClassIds.length > 0) {
+        query.class = { $in: enrolledClassIds };
+      } else {
+        // Return empty array if no enrollments
+        console.log('No enrollments found for student');
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
     }
 
     const liveClasses = await LiveClass.find(query)
       .populate('teacher', 'name email')
       .populate('class', 'title')
       .sort({ scheduledAt: 1 });
+
+    console.log('Query used for live classes:', query);
+    console.log(`Found ${liveClasses.length} live classes for student`);
+    if (liveClasses.length > 0) {
+      console.log('Sample live class:', {
+        title: liveClasses[0].title,
+        class: liveClasses[0].class,
+        status: liveClasses[0].status
+      });
+    }
 
     res.json({
       success: true,
@@ -129,7 +208,10 @@ exports.getLiveClasses = async (req, res) => {
 // Get single live class
 exports.getLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id)
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    })
       .populate('teacher', 'name email')
       .populate('class', 'title')
       .populate('attendees.student', 'name email');
@@ -157,7 +239,10 @@ exports.getLiveClass = async (req, res) => {
 // Update live class
 exports.updateLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id);
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!liveClass) {
       return res.status(404).json({
@@ -182,7 +267,7 @@ exports.updateLiveClass = async (req, res) => {
       });
     }
 
-    const allowedUpdates = ['title', 'description', 'scheduledAt', 'duration', 'maxAttendees'];
+    const allowedUpdates = ['title', 'description', 'scheduledAt', 'duration', 'maxAttendees', 'meetingUrl'];
     const updates = {};
     
     allowedUpdates.forEach(field => {
@@ -210,7 +295,10 @@ exports.updateLiveClass = async (req, res) => {
 // Start live class
 exports.startLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id);
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!liveClass) {
       return res.status(404).json({
@@ -246,7 +334,10 @@ exports.startLiveClass = async (req, res) => {
 // End live class
 exports.endLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id);
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!liveClass) {
       return res.status(404).json({
@@ -282,7 +373,10 @@ exports.endLiveClass = async (req, res) => {
 // Join live class
 exports.joinLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id);
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!liveClass) {
       return res.status(404).json({
@@ -312,8 +406,8 @@ exports.joinLiveClass = async (req, res) => {
 
     // Check if student is enrolled in the class
     if (req.user.role === 'student') {
-      const user = await req.user.populate('enrolledClasss');
-      const isEnrolled = user.enrolledClasss.some(
+      const user = await req.user.populate('enrolledClasses');
+      const isEnrolled = user.enrolledClasses.some(
         c => c._id.toString() === liveClass.class.toString()
       );
 
@@ -349,7 +443,10 @@ exports.joinLiveClass = async (req, res) => {
 // Leave live class
 exports.leaveLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id);
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!liveClass) {
       return res.status(404).json({
@@ -373,10 +470,59 @@ exports.leaveLiveClass = async (req, res) => {
   }
 };
 
+// Bulk delete scheduled live classes
+exports.deleteSelectedClasses = async (req, res) => {
+  try {
+    const { classIds } = req.body;
+
+    if (!classIds || !Array.isArray(classIds) || classIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select classes to delete'
+      });
+    }
+
+    // Find all classes to verify ownership
+    const classesToDelete = await LiveClass.find({
+      _id: { $in: classIds },
+      teacher: req.user.id,
+      organization: req.organizationId,
+      status: 'scheduled'
+    });
+
+    if (classesToDelete.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No scheduled classes found that you can delete'
+      });
+    }
+
+    // Delete the selected classes
+    const result = await LiveClass.deleteMany({
+      _id: { $in: classesToDelete.map(c => c._id) }
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} selected classes`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error deleting selected classes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting selected classes'
+    });
+  }
+};
+
 // Delete live class
 exports.deleteLiveClass = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id);
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!liveClass) {
       return res.status(404).json({
@@ -419,7 +565,10 @@ exports.deleteLiveClass = async (req, res) => {
 // Get attendance report
 exports.getAttendanceReport = async (req, res) => {
   try {
-    const liveClass = await LiveClass.findById(req.params.id)
+    const liveClass = await LiveClass.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    })
       .populate('attendees.student', 'name email');
 
     if (!liveClass) {
@@ -463,4 +612,59 @@ exports.getAttendanceReport = async (req, res) => {
       message: 'Error fetching attendance report'
     });
   }
+};
+
+// Helper function to generate recurring classes
+const generateRecurringClasses = async (originalClass, pattern) => {
+  const recurringClasses = [];
+  const startDate = new Date(originalClass.scheduledAt);
+  const maxRecurrences = 52; // Maximum 1 year for weekly, adjust as needed
+  
+  for (let i = 1; i < maxRecurrences; i++) {
+    const nextDate = new Date(startDate);
+    
+    switch (pattern) {
+      case 'daily':
+        nextDate.setDate(startDate.getDate() + i);
+        break;
+      case 'weekly':
+        nextDate.setDate(startDate.getDate() + (i * 7));
+        break;
+      case 'monthly':
+        nextDate.setMonth(startDate.getMonth() + i);
+        break;
+      default:
+        return recurringClasses;
+    }
+    
+    // Stop if we're scheduling too far into the future (1 year)
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    if (nextDate > oneYearFromNow) break;
+    
+    // Generate unique meeting details for each class
+    const meetingId = `meeting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${i}`;
+    const meetingUrl = `https://meet.balsampada.com/${meetingId}`;
+    const password = Math.random().toString(36).substr(2, 8);
+    
+    const recurringClass = await LiveClass.create({
+      title: `${originalClass.title} - Session ${i + 1}`,
+      description: originalClass.description,
+      class: originalClass.class,
+      teacher: originalClass.teacher,
+      organization: originalClass.organization,
+      scheduledAt: nextDate,
+      duration: originalClass.duration,
+      meetingUrl,
+      meetingId,
+      password,
+      maxAttendees: originalClass.maxAttendees,
+      isRecurring: true,
+      recurringPattern: pattern
+    });
+    
+    recurringClasses.push(recurringClass);
+  }
+  
+  return recurringClasses;
 };

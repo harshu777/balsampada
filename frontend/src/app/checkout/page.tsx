@@ -31,7 +31,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = searchParams.get('courseId');
-  const { user } = useAuthStore();
+  const { user, isAuthenticated, checkAuth } = useAuthStore();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,21 +49,27 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    if (courseId) {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated && user === null) {
+      router.push('/login');
+    } else if (user && courseId) {
       fetchCourseDetails();
-    } else {
-      router.push('/courses');
+    } else if (!courseId) {
+      router.push('/classes');
     }
-  }, [courseId]);
+  }, [isAuthenticated, user, courseId, router]);
 
   const fetchCourseDetails = async () => {
     try {
-      const response = await api.get(`/courses/${courseId}`);
+      const response = await api.get(`/classes/${courseId}`);
       setCourse(response.data.data);
     } catch (error) {
       console.error('Error fetching course:', error);
       toast.error('Failed to load course details');
-      router.push('/courses');
+      router.push('/classes');
     } finally {
       setLoading(false);
     }
@@ -111,14 +117,14 @@ export default function CheckoutPage() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Create enrollment after successful payment
-      const response = await api.post(`/enrollments/courses/${courseId}/enroll`, {
+      const response = await api.post(`/enrollments/classes/${courseId}/enroll`, {
         paymentStatus: 'paid',
         paymentMethod,
         amount: calculateTotal()
       });
       
       toast.success('Payment successful! You are now enrolled');
-      router.push('/courses/enrolled');
+      router.push('/classes/enrolled');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Payment failed');
     } finally {

@@ -10,6 +10,7 @@ import { Eye, EyeOff, GraduationCap, User, Mail, Phone, School } from 'lucide-re
 import toast from 'react-hot-toast';
 import useAuthStore from '@/store/authStore';
 import { BOARDS, GRADE_STANDARD_MAP } from '@/config/boards';
+import PageLayout from '@/components/layout/PageLayout';
 
 const schema = yup.object({
   // Student Details
@@ -21,7 +22,8 @@ const schema = yup.object({
   
   // Academic Details
   board: yup.string().required('Please select board'),
-  grade: yup.string().required('Please select grade/class'),
+  standard: yup.string().required('Please select standard/class'),
+  medium: yup.string().required('Please select medium'),
   school: yup.string().required('School name is required'),
   
   // Parent Details
@@ -101,7 +103,8 @@ export default function StudentRegistrationPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center">
@@ -468,5 +471,6 @@ export default function StudentRegistrationPage() {
         </div>
       </div>
     </div>
+    </PageLayout>
   );
 }

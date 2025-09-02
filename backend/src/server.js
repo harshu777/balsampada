@@ -4,7 +4,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const path = require('path');
 require('dotenv').config();
+
+// Import passport configuration
+const passport = require('./config/passport');
 
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
@@ -15,6 +20,14 @@ const paymentRoutes = require('./routes/payment.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const adminRoutes = require('./routes/admin.routes');
 const liveClassRoutes = require('./routes/liveClass.routes');
+const studyMaterialRoutes = require('./routes/studyMaterial.routes');
+const progressRoutes = require('./routes/progress.routes');
+const gradeRoutes = require('./routes/grade.routes');
+const subjectRoutes = require('./routes/subject.routes');
+const onboardingRoutes = require('./routes/onboarding.routes');
+
+// Import middleware
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -50,20 +63,44 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// Session configuration for OAuth
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallback-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use('/api/', limiter);
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/balsampada-lms', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB');
-}).catch((err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/balsampada-lms')
+  .then(() => {
+    console.log('Connected to MongoDB');
+  }).catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+// Organization routes (before auth for signup)
+const organizationRoutes = require('./routes/organization.routes');
+const subscriptionRoutes = require('./routes/subscription.routes');
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -74,19 +111,19 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/live-classes', liveClassRoutes);
+app.use('/api/study-materials', studyMaterialRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/grades', gradeRoutes);
+app.use('/api/subjects', subjectRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/student-groups', require('./routes/studentGroup.routes'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Balsampada LMS API is running' });
 });
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+// Use our custom error handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

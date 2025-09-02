@@ -1,6 +1,7 @@
 const Class = require('../models/Class');
 const Enrollment = require('../models/Enrollment');
 const { validationResult } = require('express-validator');
+const { paginate, paginateResponse, buildQuery } = require('../utils/pagination');
 
 exports.createClass = async (req, res) => {
   try {
@@ -14,7 +15,8 @@ exports.createClass = async (req, res) => {
 
     const classItemData = {
       ...req.body,
-      teacher: req.user.id
+      teacher: req.user.id,
+      organization: req.organizationId
     };
 
     const classItem = await Class.create(classItemData);
@@ -36,19 +38,22 @@ exports.createClass = async (req, res) => {
 
 exports.getClasses = async (req, res) => {
   try {
+    const { page, limit, skip, sort } = paginate(req.query);
     const {
       category,
       level,
       search,
       minPrice,
       maxPrice,
-      status = 'published',
-      page = 1,
-      limit = 10,
-      sort = '-createdAt'
+      status = 'published'
     } = req.query;
 
     const query = {};
+
+    // Add organization filter only if user is authenticated and has organizationId
+    if (req.organizationId) {
+      query.organization = req.organizationId;
+    }
 
     if (category) query.category = category;
     if (level) query.level = level;
@@ -68,24 +73,19 @@ exports.getClasses = async (req, res) => {
       ];
     }
 
-    const skip = (page - 1) * limit;
-
     const classes = await Class.find(query)
       .populate('teacher', 'name email avatar qualification')
       .sort(sort)
       .skip(skip)
-      .limit(Number(limit));
+      .limit(limit);
 
     const total = await Class.countDocuments(query);
 
+    const response = paginateResponse(classes, page, limit, total);
+    
     res.status(200).json({
       success: true,
-      data: classes,
-      pagination: {
-        total,
-        page: Number(page),
-        pages: Math.ceil(total / limit)
-      }
+      ...response
     });
   } catch (error) {
     console.error('Get classes error:', error);
@@ -98,7 +98,14 @@ exports.getClasses = async (req, res) => {
 
 exports.getClass = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id)
+    const query = { _id: req.params.id };
+    
+    // Add organization filter only if user is authenticated and has organizationId
+    if (req.organizationId) {
+      query.organization = req.organizationId;
+    }
+    
+    const classItem = await Class.findOne(query)
       .populate('teacher', 'name email avatar bio qualification experience')
       .populate('enrolledStudents', 'name avatar');
 
@@ -133,8 +140,8 @@ exports.getClass = async (req, res) => {
 
 exports.updateClass = async (req, res) => {
   try {
-    const classItem = await Class.findByIdAndUpdate(
-      req.params.id,
+    const classItem = await Class.findOneAndUpdate(
+      { _id: req.params.id, organization: req.organizationId },
       req.body,
       {
         new: true,
@@ -164,7 +171,10 @@ exports.updateClass = async (req, res) => {
 
 exports.deleteClass = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -197,7 +207,10 @@ exports.deleteClass = async (req, res) => {
 
 exports.publishClass = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -232,7 +245,10 @@ exports.publishClass = async (req, res) => {
 
 exports.addModule = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -259,7 +275,10 @@ exports.addModule = async (req, res) => {
 
 exports.updateModule = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -294,7 +313,10 @@ exports.updateModule = async (req, res) => {
 
 exports.deleteModule = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -321,7 +343,10 @@ exports.deleteModule = async (req, res) => {
 
 exports.addLesson = async (req, res) => {
   try {
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -360,7 +385,10 @@ exports.addLesson = async (req, res) => {
 exports.rateClass = async (req, res) => {
   try {
     const { rating, review } = req.body;
-    const classItem = await Class.findById(req.params.id);
+    const classItem = await Class.findOne({
+      _id: req.params.id,
+      organization: req.organizationId
+    });
 
     if (!classItem) {
       return res.status(404).json({
@@ -415,7 +443,10 @@ exports.rateClass = async (req, res) => {
 
 exports.getTeacherClasses = async (req, res) => {
   try {
-    const classes = await Class.find({ teacher: req.user.id })
+    const classes = await Class.find({ 
+      teacher: req.user.id,
+      organization: req.organizationId
+    })
       .populate('enrolledStudents', 'name email')
       .sort('-createdAt');
 

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Architecture Diagram</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 15px;
+      background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+      border-radius: 10px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    header h1 {
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+    }
+    
+    header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    
+    .legend {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 25px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    
+    .diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+    }
+    
+    .layer {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .layer-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #4b6cb7;
+      padding: 8px 16px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    
+    .box {
+      padding: 16px 24px;
+      border: 2px solid #444;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      min-width: 240px;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .box:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+      z-index: 10;
+    }
+    
+    .internet { border-color: #4b6cb7; background: #e8f0fe; }
+    .load-balancer { border-color: #2e86c1; background: #eaf2f8; }
+    .ingress { border-color: #17a2b8; background: #e8f6fa; }
+    .routing { border-color: #138d75; background: #e8f8f5; }
+    .network { border-color: #d68910; background: #fef9e7; }
+    .observability { border-color: #9b59b6; background: #f4ecf7; }
+    .platform { border-color: #cb4335; background: #fdedec; }
+    
+    .arrow {
+      font-size: 24px;
+      color: #444;
+      margin: 5px 0;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .branch {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 25px;
+      width: 100%;
+    }
+    
+    .namespace {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 8px;
+      font-style: italic;
+    }
+    
+    .group {
+      border: 2px dashed #888;
+      padding: 20px;
+      border-radius: 12px;
+      background: #fafafa;
+      width: 100%;
+    }
+    
+    .group-title {
+      text-align: center;
+      margin-top: -35px;
+      margin-bottom: 15px;
+      background: #fafafa;
+      display: inline-block;
+      padding: 0 15px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    .box i {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+    
+    .box-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #2c3e50;
+    }
+    
+    .box-desc {
+      font-size: 0.9rem;
+      color: #555;
+    }
+    
+    .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+    
+    .box:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .tooltip:after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: #333 transparent transparent transparent;
+    }
+    
+    .network-services {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+    }
+    
+    .application-services, .data-services {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .sub-group {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+      background: #fff;
+    }
+    
+    .sub-group-title {
+      text-align: center;
+      margin-top: -27px;
+      margin-bottom: 15px;
+      background: #fff;
+      display: inline-block;
+      padding: 0 10px;
+      font-weight: 600;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      .branch {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .box {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      .network-services {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Server Architecture Diagram</h1>
+      <p>Visualizing the infrastructure and service relationships</p>
+    </header>
+    
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background: #e8f0fe; border: 1px solid #4b6cb7;"></div>
+        <span>Internet-facing</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #eaf2f8; border: 1px solid #2e86c1;"></div>
+        <span>Load Balancing</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #e8f6fa; border: 1px solid #17a2b8;"></div>
+        <span>Ingress</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #e8f8f5; border: 1px solid #138d75;"></div>
+        <span>Application Services</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #fef9e7; border: 1px solid #d68910;"></div>
+        <span>Data Services</span>
+      </div>
+    </div>
+    
+    <div class="diagram">
+      <div class="layer">
+        <div class="box internet">
+          <i class="fas fa-globe"></i>
+          <div class="box-title">Internet</div>
+          <div class="tooltip">Public internet access point</div>
+        </div>
+      </div>
+      
+      <div class="arrow">
+        <i class="fas fa-chevron-down"></i>
+      </div>
+      
+      <div class="layer">
+        <div class="box load-balancer">
+          <i class="fas fa-balance-scale"></i>
+          <div class="box-title">Hetzner Load Balancer</div>
+          <div class="box-desc">public IP/DNS, 80/443 only</div>
+          <div class="tooltip">Distributes traffic to backend services</div>
+        </div>
+      </div>
+      
+      <div class="arrow">
+        <i class="fas fa-chevron-down"></i>
+      </div>
+      
+      <div class="layer">
+        <div class="box ingress">
+          <i class="fas fa-traffic-light"></i>
+          <div class="box-title">Ingress Controller (NGINX / Traefik)</div>
+          <div class="box-desc">+ cert-manager (TLS)</div>
+          <div class="tooltip">Manages incoming traffic and SSL termination</div>
+        </div>
+      </div>
+      
+      <div class="arrow">
+        <i class="fas fa-chevron-down"></i>
+      </div>
+      
+      <div class="layer">
+        <div class="group">
+          <div class="group-title">Private Network (Hetzner VPC)</div>
+          
+          <div class="network-services">
+            <div class="application-services">
+              <div class="sub-group">
+                <div class="sub-group-title">Application Services</div>
+                <div class="branch">
+                  <div class="box routing">
+                    <i class="fas fa-code"></i>
+                    <div class="box-title">Web Frontend</div>
+                    <div class="box-desc">Serves / (web)</div>
+                    <div class="namespace">Namespace: web</div>
+                    <div class="tooltip">Serves the main web application</div>
+                  </div>
+                  
+                  <div class="box routing">
+                    <i class="fas fa-cogs"></i>
+                    <div class="box-title">PAPG API</div>
+                    <div class="box-desc">Handles /api/* routes</div>
+                    <div class="namespace">Namespace: api</div>
+                    <div class="tooltip">API endpoints for application data</div>
+                  </div>
+                  
+                  <div class="box routing">
+                    <i class="fas fa-credit-card"></i>
+                    <div class="box-title">Hyperswitch</div>
+                    <div class="box-desc">Processes /pay/* routes</div>
+                    <div class="namespace">Namespace: hyperswitch</div>
+                    <div class="tooltip">Payment processing services</div>
+                  </div>
+                  
+                  <div class="box routing">
+                    <i class="fas fa-bell"></i>
+                    <div class="box-title">PAPG API Webhook</div>
+                    <div class="box-desc">Handles /webhook/* routes</div>
+                    <div class="namespace">Namespace: api</div>
+                    <div class="tooltip">Webhook handlers for external services</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="data-services">
+              <div class="sub-group">
+                <div class="sub-group-title">Data Services</div>
+                <div class="branch">
+                  <div class="box network">
+                    <i class="fas fa-database"></i>
+                    <div class="box-title">Postgres</div>
+                    <div class="namespace">PV on hcloud volume</div>
+                    <div class="tooltip">Primary relational database</div>
+                  </div>
+                  
+                  <div class="box network">
+                    <i class="fas fa-memory"></i>
+                    <div class="box-title">Redis</div>
+                    <div class="namespace">PV on hcloud volume</div>
+                    <div class="tooltip">In-memory data store and cache</div>
+                  </div>
+                  
+                  <div class="box network">
+                    <i class="fas fa-hdd"></i>
+                    <div class="box-title">MinIO / S3</div>
+                    <div class="namespace">optional, logs/backups</div>
+                    <div class="tooltip">Object storage for backups and logs</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="arrow">
+        <i class="fas fa-chevron-down"></i>
+      </div>
+      
+      <div class="layer">
+        <div class="group">
+          <div class="group-title">Observability (Namespace: monitoring)</div>
+          <div class="branch">
+            <div class="box observability">
+              <i class="fas fa-chart-line"></i>
+              <div class="box-title">Prometheus + Alertmanager</div>
+              <div class="tooltip">Metrics collection and alerting</div>
+            </div>
+            
+            <div class="box observability">
+              <i class="fas fa-chart-bar"></i>
+              <div class="box-title">Grafana</div>
+              <div class="tooltip">Monitoring dashboards and visualization</div>
+            </div>
+            
+            <div class="box observability">
+              <i class="fas fa-search"></i>
+              <div class="box-title">Loki / EFK (logs)</div>
+              <div class="tooltip">Log aggregation and analysis</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="arrow">
+        <i class="fas fa-chevron-down"></i>
+      </div>
+      
+      <div class="layer">
+        <div class="group">
+          <div class="group-title">Platform</div>
+          <div class="branch">
+            <div class="box platform">
+              <i class="fas fa-signature"></i>
+              <div class="box-title">ExternalDNS</div>
+              <div class="tooltip">Automated DNS management</div>
+            </div>
+            
+            <div class="box platform">
+              <i class="fas fa-lock"></i>
+              <div class="box-title">cert-manager</div>
+              <div class="tooltip">TLS certificate management</div>
+            </div>
+            
+            <div class="box platform">
+              <i class="fas fa-key"></i>
+              <div class="box-title">Sealed / External Secrets + Vault</div>
+              <div class="tooltip">Secret management and encryption</div>
+            </div>
+            
+            <div class="box platform">
+              <i class="fas fa-rocket"></i>
+              <div class="box-title">ArgoCD / GitHub Actions</div>
+              <div class="tooltip">CI/CD and deployment automation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add animation to boxes
+      const boxes = document.querySelectorAll('.box');
+      
+      boxes.forEach(box => {
+        box.addEventListener('mouseover', function() {
+          this.style.transform = 'translateY(-5px)';
+          this.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.15)';
+        });
+        
+        box.addEventListener('mouseout', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

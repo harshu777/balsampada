@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const enrollmentSchema = new mongoose.Schema({
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   student: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -17,7 +23,7 @@ const enrollmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed', 'dropped', 'suspended'],
+    enum: ['active', 'completed', 'dropped', 'suspended', 'enrolled'], // 'enrolled' added for backward compatibility
     default: 'active'
   },
   progress: {
@@ -147,21 +153,32 @@ const enrollmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-enrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
+// Indexes for better query performance
+enrollmentSchema.index({ student: 1, class: 1 }, { unique: true });
 enrollmentSchema.index({ status: 1, enrollmentDate: 1 });
+enrollmentSchema.index({ 'payment.status': 1 });
+enrollmentSchema.index({ 'progress.percentageComplete': 1 });
+enrollmentSchema.index({ class: 1, status: 1 }); // For fetching class enrollments
 
-enrollmentSchema.methods.updateProgress = function() {
-  const course = this.course;
-  if (course && course.modules) {
-    const totalLessons = course.modules.reduce((acc, module) => 
-      acc + module.lessons.length, 0
-    );
+enrollmentSchema.methods.updateProgress = async function() {
+  try {
+    // Get study materials count for this class as a proxy for total lessons
+    const StudyMaterial = require('./StudyMaterial');
+    const totalMaterials = await StudyMaterial.countDocuments({
+      class: this.class,
+      isActive: true
+    });
+    
     const completedCount = this.progress.completedLessons.length;
-    this.progress.percentageComplete = totalLessons > 0 
-      ? Math.round((completedCount / totalLessons) * 100)
+    this.progress.percentageComplete = totalMaterials > 0 
+      ? Math.round((completedCount / totalMaterials) * 100)
       : 0;
+    
+    return this.save();
+  } catch (error) {
+    console.error('Error updating progress:', error);
+    return this;
   }
-  return this.save();
 };
 
 enrollmentSchema.methods.calculateFinalGrade = function() {

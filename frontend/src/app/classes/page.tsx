@@ -16,6 +16,7 @@ import {
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
+import PageLayout from '@/components/layout/PageLayout';
 
 interface Class {
   _id: string;
@@ -27,13 +28,15 @@ interface Class {
   standard?: string;
   subject?: string;
   price: number;
+  discountPrice?: number;
   duration: number;
   teacher: {
     _id: string;
     name: string;
   };
-  enrolledStudents: number;
-  rating: number;
+  enrolledStudents: any[];
+  averageRating?: number;
+  rating?: number;
   status: string;
 }
 
@@ -48,7 +51,7 @@ export default function ClassesPage() {
   const [selectedStandard, setSelectedStandard] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  const categories = ['all', 'Mathematics', 'Science', 'English', 'Social Studies', 'Languages', 'Computer Science'];
+  const categories = ['all', 'Mathematics', 'Science', 'English', 'Social Studies', 'Languages', 'Computer Science', 'Other'];
   const boards = ['all', 'CBSE', 'ICSE', 'SSC', 'ISC', 'HSC', 'IB', 'IGCSE'];
   const standards = ['all', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
@@ -63,8 +66,18 @@ export default function ClassesPage() {
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/classes');
-      const publishedClasses = response.data.data.filter((cls: Class) => cls.status === 'published');
+      // Create axios instance without interceptors for public access
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/classes`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      const data = await response.json();
+      console.log('Classes API response:', data);
+      const allClasses = data.data || [];
+      const publishedClasses = allClasses.filter((cls: Class) => cls.status === 'published');
+      console.log('Published classes:', publishedClasses.length, 'out of', allClasses.length);
       setClasses(publishedClasses);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -87,7 +100,11 @@ export default function ClassesPage() {
 
     // Category filter
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(cls => cls.category === selectedCategory);
+      filtered = filtered.filter(cls => {
+        // Map subject to category if category field is missing or 'Other'
+        const classCategory = cls.category === 'Other' || !cls.category ? cls.subject : cls.category;
+        return classCategory === selectedCategory || cls.subject === selectedCategory;
+      });
     }
 
     // Board filter
@@ -109,10 +126,10 @@ export default function ClassesPage() {
         filtered.sort((a, b) => b.price - a.price);
         break;
       case 'popular':
-        filtered.sort((a, b) => b.enrolledStudents - a.enrolledStudents);
+        filtered.sort((a, b) => b.enrolledStudents.length - a.enrolledStudents.length);
         break;
       case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => (b.averageRating || b.rating || 0) - (a.averageRating || a.rating || 0));
         break;
       case 'newest':
       default:
@@ -124,12 +141,13 @@ export default function ClassesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PageLayout>
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12">
+      <div className="text-white py-12" style={{background: 'linear-gradient(135deg, #DA528C, #AC6CA1)'}}>
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl font-bold mb-4">Live Online Classes</h1>
-          <p className="text-xl text-blue-100">Interactive learning with expert teachers in real-time</p>
+          <p className="text-xl text-white/80">Interactive learning with expert teachers in real-time</p>
           <div className="flex items-center gap-2 mt-4">
             <div className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-sm font-medium">
               <span className="mr-2">🔴</span> All Classes are Live
@@ -155,7 +173,7 @@ export default function ClassesPage() {
                 <input
                   type="text"
                   placeholder="Search classes, teachers, or subjects..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -165,7 +183,7 @@ export default function ClassesPage() {
             {/* Filters */}
             <div className="flex gap-2">
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
@@ -176,7 +194,7 @@ export default function ClassesPage() {
               </select>
 
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
                 value={selectedBoard}
                 onChange={(e) => setSelectedBoard(e.target.value)}
               >
@@ -187,7 +205,7 @@ export default function ClassesPage() {
               </select>
 
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
                 value={selectedStandard}
                 onChange={(e) => setSelectedStandard(e.target.value)}
               >
@@ -198,7 +216,7 @@ export default function ClassesPage() {
               </select>
 
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -240,7 +258,7 @@ export default function ClassesPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all cursor-pointer group"
+                  className="bg-white rounded-lg overflow-hidden transition-all cursor-pointer group" style={{boxShadow: '0 4px 15px rgba(108, 66, 37, 0.1)', border: '1px solid #AC6CA120'}}
                   onClick={() => router.push(`/classes/${classItem._id}`)}
                 >
                   <div className="relative overflow-hidden h-48">
@@ -250,11 +268,11 @@ export default function ClassesPage() {
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                     {classItem.category && (
-                      <div className="absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                      <div className="absolute top-4 left-4 text-white px-3 py-1 rounded-full text-sm font-medium" style={{backgroundColor: '#DA528C'}}>
                         {classItem.category}
                       </div>
                     )}
-                    <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                    <div className="absolute top-4 right-4 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center" style={{backgroundColor: '#82993D'}}>
                       <span className="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></span>
                       LIVE
                     </div>
@@ -276,12 +294,12 @@ export default function ClassesPage() {
 
                     <div className="flex flex-wrap gap-2 mb-3">
                       {classItem.board && (
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                        <span className="text-xs px-2 py-1 rounded" style={{backgroundColor: '#E18DB720', color: '#6C4225'}}>
                           {classItem.board}
                         </span>
                       )}
                       {classItem.standard && (
-                        <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">
+                        <span className="text-xs px-2 py-1 rounded" style={{backgroundColor: '#82993D20', color: '#82993D'}}>
                           Class {classItem.standard}
                         </span>
                       )}
@@ -289,10 +307,10 @@ export default function ClassesPage() {
 
                     <div className="flex items-center justify-between text-sm mb-3">
                       <div className="flex items-center">
-                        {classItem.rating > 0 ? (
+                        {(classItem.averageRating || classItem.rating || 0) > 0 ? (
                           <>
                             <StarSolid className="w-4 h-4 text-yellow-500" />
-                            <span className="ml-1 font-medium">{classItem.rating.toFixed(1)}</span>
+                            <span className="ml-1 font-medium">{(classItem.averageRating || classItem.rating || 0).toFixed(1)}</span>
                           </>
                         ) : (
                           <span className="text-gray-400">No ratings yet</span>
@@ -300,14 +318,24 @@ export default function ClassesPage() {
                       </div>
                       <div className="flex items-center text-gray-500">
                         <UserGroupIcon className="w-4 h-4 mr-1" />
-                        <span>{classItem.enrolledStudents} students</span>
+                        <span>{classItem.enrolledStudents.length} students</span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t">
                       <div>
-                        <span className="text-xl font-bold text-gray-900">₹{classItem.price}</span>
-                        <span className="text-sm text-gray-500">/month</span>
+                        {classItem.discountPrice && classItem.discountPrice < classItem.price ? (
+                          <>
+                            <span className="text-xl font-bold" style={{color: '#6C4225'}}>₹{classItem.discountPrice}</span>
+                            <span className="text-sm text-gray-500 line-through ml-2">₹{classItem.price}</span>
+                            <span className="text-sm text-gray-500">/month</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xl font-bold" style={{color: '#6C4225'}}>₹{classItem.price}</span>
+                            <span className="text-sm text-gray-500">/month</span>
+                          </>
+                        )}
                       </div>
                       <span className="text-sm text-gray-500">
                         {classItem.duration} weeks
@@ -327,5 +355,6 @@ export default function ClassesPage() {
         )}
       </div>
     </div>
+    </PageLayout>
   );
 }

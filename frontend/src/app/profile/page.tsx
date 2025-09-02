@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
@@ -23,7 +24,8 @@ import {
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuthStore();
+  const router = useRouter();
+  const { user, updateUser, isAuthenticated, checkAuth } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
@@ -62,8 +64,16 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    fetchUserStats();
+    checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated && user === null) {
+      router.push('/login');
+    } else if (user) {
+      fetchUserStats();
+    }
+  }, [isAuthenticated, user, router]);
 
   const fetchUserStats = async () => {
     // Mock stats for now

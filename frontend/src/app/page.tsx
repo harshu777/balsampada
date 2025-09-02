@@ -36,6 +36,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
 import useAuthStore from '@/store/authStore';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function Home() {
   const router = useRouter();
@@ -60,9 +61,16 @@ export default function Home() {
     const fetchClasses = async () => {
       try {
         setLoadingClasses(true);
-        const response = await api.get('/classes');
+        // Fetch without authentication for public access
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/classes`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        const data = await response.json();
         // Get only published classes and limit to 4 for display
-        const publishedClasses = response.data.data
+        const publishedClasses = (data.data || [])
           .filter((cls: any) => cls.status === 'published')
           .slice(0, 4);
         setRealClasses(publishedClasses);
@@ -211,117 +219,113 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <Link href="/" className="flex items-center">
-                <Image 
-                  src="/balsampada-logo.svg" 
-                  alt="Balsampada" 
-                  width={150} 
-                  height={40} 
-                  className="h-10 w-auto"
-                />
-              </Link>
-              
-              <div className="hidden md:flex space-x-6">
-                <Link href="/courses" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                  Courses
-                </Link>
-                <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                  About
-                </Link>
-                <Link href="/teachers" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                  Teachers
-                </Link>
-                <Link href="/contact" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                  Contact
-                </Link>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/login" 
-                className="text-gray-700 hover:text-blue-600 font-medium transition"
-              >
-                Login
-              </Link>
-              <Link 
-                href="/register" 
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
-              >
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-blue-200 rounded-full opacity-20 blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-200 rounded-full opacity-20 blur-3xl"></div>
-        </div>
+    <PageLayout>
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 relative overflow-hidden">
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="inline-flex items-center px-4 py-2 bg-red-50 border border-red-200 rounded-full mb-6">
-                <span className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></span>
-                <span className="text-red-700 font-medium">Live Online Classes Available</span>
-              </div>
-              
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                Learn Live,
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600"> Excel Together</span>
-              </h1>
-              
-              <p className="text-xl text-gray-600 mb-8">
-                Experience interactive online learning with real-time doubt clearing, personalized attention, and expert teachers for Classes 4-12 across all boards.
-              </p>
+        {/* Animated Background Elements */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary-200/20 to-secondary-200/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-accent-200/20 to-primary-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-gradient-to-r from-secondary-200/10 to-accent-200/10 rounded-full blur-2xl animate-pulse-slow" />
+        </div>
 
-              {/* Search Bar */}
-              <div className="bg-white rounded-xl shadow-lg p-2 mb-8">
-                <div className="flex items-center">
-                  <input
-                    type="text"
-                    placeholder="What do you want to learn today?"
-                    className="flex-1 px-4 py-3 outline-none text-gray-700"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center">
-                    <MagnifyingGlassIcon className="w-5 h-5 mr-2" />
-                    Search
-                  </button>
-                </div>
-              </div>
+        {/* Hero Section */}
+        <section className="relative py-20 lg:py-32">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
+                className="relative z-10"
+              >
+                <motion.div 
+                  className="inline-flex items-center px-6 py-3 bg-white/80 backdrop-blur-sm rounded-4xl mb-8 shadow-soft-lg border border-white/40"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                >
+                  <div className="relative mr-3">
+                    <span className="w-3 h-3 rounded-full animate-pulse bg-accent-500"></span>
+                    <span className="absolute inset-0 w-3 h-3 bg-accent-500 rounded-full animate-ping opacity-75"></span>
+                  </div>
+                  <span className="font-semibold text-neutral-700">🔴 Live Online Classes Available</span>
+                </motion.div>
+                
+                <h1 className="text-5xl lg:text-7xl font-display font-bold mb-8 leading-tight">
+                  <span className="text-neutral-900">Learn Live,</span>
+                  <br />
+                  <span className="bg-gradient-to-r from-primary-600 via-secondary-500 to-accent-500 bg-clip-text text-transparent animate-gradient bg-[length:200%_200%]">
+                    Excel Together
+                  </span>
+                </h1>
+                
+                <p className="text-xl lg:text-2xl text-neutral-600 mb-10 leading-relaxed font-medium">
+                  Experience interactive online learning with real-time doubt clearing, personalized attention, 
+                  and expert teachers for Classes 4-12 across all boards.
+                </p>
 
-              {/* Quick Stats */}
-              <div className="flex items-center space-x-6 text-sm">
-                <div className="flex items-center">
-                  <CheckBadgeIcon className="w-5 h-5 text-green-500 mr-1" />
-                  <span className="text-gray-700">Verified Teachers</span>
+                {/* Search Bar */}
+                <motion.div 
+                  className="bg-white/80 backdrop-blur-lg rounded-4xl shadow-soft-2xl p-3 mb-10 border border-white/40"
+                  whileHover={{ shadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)" }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      placeholder="What do you want to learn today? 🚀"
+                      className="flex-1 px-6 py-4 bg-transparent outline-none text-neutral-700 placeholder:text-neutral-400 text-lg"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <motion.button 
+                      className="px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-3xl font-semibold hover:from-primary-600 hover:to-primary-700 transition-all duration-300 flex items-center shadow-soft-lg hover:shadow-soft-xl"
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <MagnifyingGlassIcon className="w-6 h-6 mr-2" />
+                      Search
+                    </motion.button>
+                  </div>
+                </motion.div>
+
+                {/* Quick Stats */}
+                <div className="flex flex-wrap items-center gap-8">
+                  <motion.div 
+                    className="flex items-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                  >
+                    <div className="p-2 rounded-2xl bg-gradient-to-br from-accent-100 to-accent-200 mr-3">
+                      <CheckBadgeIcon className="w-5 h-5 text-accent-600" />
+                    </div>
+                    <span className="font-medium text-neutral-700">Verified Teachers</span>
+                  </motion.div>
+                  <motion.div 
+                    className="flex items-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                  >
+                    <div className="p-2 rounded-2xl bg-gradient-to-br from-yellow-100 to-orange-200 mr-3">
+                      <StarIcon className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <span className="font-medium text-neutral-700">4.8/5 Rating</span>
+                  </motion.div>
+                  <motion.div 
+                    className="flex items-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                  >
+                    <div className="p-2 rounded-2xl bg-gradient-to-br from-secondary-100 to-secondary-200 mr-3">
+                      <UserGroupIcon className="w-5 h-5 text-secondary-600" />
+                    </div>
+                    <span className="font-medium text-neutral-700">15K+ Students</span>
+                  </motion.div>
                 </div>
-                <div className="flex items-center">
-                  <StarIcon className="w-5 h-5 text-yellow-500 mr-1" />
-                  <span className="text-gray-700">4.8/5 Rating</span>
-                </div>
-                <div className="flex items-center">
-                  <UserGroupIcon className="w-5 h-5 text-blue-500 mr-1" />
-                  <span className="text-gray-700">15K+ Students</span>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
 
             <motion.div
               initial={{ opacity: 0, x: 50 }}
@@ -339,8 +343,8 @@ export default function Home() {
                 {/* Floating Cards */}
                 <div className="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg p-4 animate-float">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <TrophyIcon className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{backgroundColor: '#82993D20'}}>
+                      <TrophyIcon className="w-6 h-6" style={{color: '#82993D'}} />
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-gray-900">98%</p>
@@ -367,10 +371,10 @@ export default function Home() {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16" style={{backgroundColor: '#E18DB710'}}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Browse Categories</h2>
+            <h2 className="text-3xl font-bold mb-4" style={{color: '#6C4225'}}>Browse Categories</h2>
             <p className="text-gray-600">Choose from our wide range of subjects</p>
           </div>
           
@@ -382,11 +386,12 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -5 }}
-                className="bg-white rounded-xl p-6 text-center cursor-pointer hover:shadow-lg transition-all"
+                className="bg-white rounded-xl p-6 text-center cursor-pointer transition-all"
+                style={{border: '1px solid #AC6CA130', boxShadow: '0 4px 6px rgba(172, 108, 161, 0.1)'}}
               >
                 <div className="text-4xl mb-3">{category.icon}</div>
-                <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">{category.count} Courses</p>
+                <h3 className="font-semibold" style={{color: '#6C4225'}}>{category.name}</h3>
+                <p className="text-sm mt-1" style={{color: '#82993D'}}>{category.count} Courses</p>
               </motion.div>
             ))}
           </div>
@@ -401,7 +406,7 @@ export default function Home() {
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Our Classes</h2>
               <p className="text-gray-600">Comprehensive tuition for all boards and standards</p>
             </div>
-            <Link href="/classes" className="text-blue-600 hover:text-blue-700 font-medium flex items-center">
+            <Link href="/classes" className="font-medium flex items-center hover:opacity-80 transition" style={{color: '#DA528C'}}>
               View All Classes
               <ArrowRightIcon className="w-4 h-4 ml-2" />
             </Link>
@@ -483,13 +488,13 @@ export default function Home() {
                       <div className="space-y-1 mb-3">
                         {classItem.board && (
                           <div className="flex items-center text-xs text-gray-500">
-                            <CheckIcon className="w-3 h-3 text-green-500 mr-1" />
+                            <CheckIcon className="w-3 h-3 mr-1" style={{color: '#82993D'}} />
                             <span>Board: {classItem.board}</span>
                           </div>
                         )}
                         {classItem.standard && (
                           <div className="flex items-center text-xs text-gray-500">
-                            <CheckIcon className="w-3 h-3 text-green-500 mr-1" />
+                            <CheckIcon className="w-3 h-3 mr-1" style={{color: '#82993D'}} />
                             <span>Standard: {classItem.standard}</span>
                           </div>
                         )}
@@ -515,7 +520,7 @@ export default function Home() {
                         </div>
                         <Link 
                           href={`/classes/${classItem._id}`}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                          className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition text-sm" style={{backgroundColor: '#82993D'}}
                         >
                           View Details
                         </Link>
@@ -542,7 +547,7 @@ export default function Home() {
                       <div className="space-y-1 mb-3">
                         {classItem.features.slice(0, 2).map((feature, i) => (
                           <div key={i} className="flex items-center text-xs text-gray-500">
-                            <CheckIcon className="w-3 h-3 text-green-500 mr-1" />
+                            <CheckIcon className="w-3 h-3 mr-1" style={{color: '#82993D'}} />
                             <span>{feature}</span>
                           </div>
                         ))}
@@ -567,7 +572,7 @@ export default function Home() {
                           <span className="text-lg font-bold text-gray-900">{classItem.price}</span>
                           <span className="text-xs text-gray-500 line-through block">{classItem.originalPrice}</span>
                         </div>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                        <button className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition text-sm" style={{backgroundColor: '#82993D'}}>
                           Enroll Now
                         </button>
                       </div>
@@ -582,11 +587,11 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+      <section className="py-16 text-white" style={{background: 'linear-gradient(135deg, #DA528C, #AC6CA1)'}}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Why Choose Balsampada?</h2>
-            <p className="text-blue-100">Experience the best in online education</p>
+            <p className="text-white/80">Experience the best in online education</p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -602,7 +607,7 @@ export default function Home() {
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-blue-100">{feature.description}</p>
+                <p className="text-white/80">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -621,7 +626,7 @@ export default function Home() {
                 transition={{ delay: index * 0.1, duration: 0.5 }}
                 className="text-center"
               >
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#82993D20', color: '#6C4225'}}>
                   {stat.icon}
                 </div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">
@@ -642,10 +647,10 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16" style={{backgroundColor: '#AC6CA110'}}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Students Say</h2>
+            <h2 className="text-3xl font-bold mb-4" style={{color: '#6C4225'}}>What Our Students Say</h2>
             <p className="text-gray-600">Real experiences from real students</p>
           </div>
           
@@ -656,11 +661,12 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-lg"
+                className="bg-white rounded-xl p-6"
+                style={{boxShadow: '0 10px 25px rgba(108, 66, 37, 0.1)'}}
               >
                 <div className="flex mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <StarSolid key={i} className="w-5 h-5 text-yellow-500" />
+                    <StarSolid key={i} className="w-5 h-5" style={{color: '#DA528C'}} />
                   ))}
                 </div>
                 
@@ -671,10 +677,11 @@ export default function Home() {
                     src={testimonial.image} 
                     alt={testimonial.name}
                     className="w-12 h-12 rounded-full mr-4"
+                    style={{border: '2px solid #82993D'}}
                   />
                   <div>
-                    <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                    <h4 className="font-semibold" style={{color: '#6C4225'}}>{testimonial.name}</h4>
+                    <p className="text-sm" style={{color: '#82993D'}}>{testimonial.role}</p>
                   </div>
                 </div>
               </motion.div>
@@ -684,7 +691,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-orange-500 to-red-500 text-white">
+      <section className="py-20 text-white" style={{background: 'linear-gradient(135deg, #AC6CA1, #DA528C)'}}>
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -694,13 +701,13 @@ export default function Home() {
             <h2 className="text-4xl font-bold mb-4">
               Start Your Learning Journey Today
             </h2>
-            <p className="text-xl mb-8 text-orange-100">
+            <p className="text-xl mb-8 text-white/90">
               Join thousands of students achieving their academic goals
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
                 href="/register" 
-                className="px-8 py-4 bg-white text-orange-500 rounded-lg font-semibold hover:bg-gray-100 transition transform hover:scale-105"
+                className="px-8 py-4 bg-white rounded-lg font-semibold hover:bg-gray-100 transition transform hover:scale-105" style={{color: '#AC6CA1'}}
               >
                 Get Started Free
               </Link>
@@ -714,85 +721,7 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <Image 
-                src="/balsampada-logo.svg" 
-                alt="Balsampada" 
-                width={150} 
-                height={40} 
-                className="h-10 w-auto mb-4 brightness-0 invert"
-              />
-              <p className="text-gray-400 mb-4">
-                Empowering students through quality education for a brighter future.
-              </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                  </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
-                  </svg>
-                </a>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-bold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/about" className="hover:text-white transition">About Us</Link></li>
-                <li><Link href="/courses" className="hover:text-white transition">All Courses</Link></li>
-                <li><Link href="/teachers" className="hover:text-white transition">Our Teachers</Link></li>
-                <li><Link href="/blog" className="hover:text-white transition">Blog</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-bold mb-4">Support</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/help" className="hover:text-white transition">Help Center</Link></li>
-                <li><Link href="/faq" className="hover:text-white transition">FAQs</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition">Terms & Conditions</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-bold mb-4">Contact Info</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li className="flex items-start">
-                  <MapPinIcon className="w-5 h-5 mr-2 mt-0.5 text-orange-500" />
-                  <span>123 Education Street, Mumbai, Maharashtra 400001</span>
-                </li>
-                <li className="flex items-center">
-                  <PhoneIcon className="w-5 h-5 mr-2 text-orange-500" />
-                  <span>+91 98765 43210</span>
-                </li>
-                <li className="flex items-center">
-                  <EnvelopeIcon className="w-5 h-5 mr-2 text-orange-500" />
-                  <span>info@balsampada.com</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>&copy; 2024 Balsampada LMS. All rights reserved. | Designed with ❤️ for Education</p>
-          </div>
-        </div>
-      </footer>
     </div>
+    </PageLayout>
   );
 }

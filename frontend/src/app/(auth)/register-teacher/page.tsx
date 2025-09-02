@@ -8,6 +8,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import api from '@/lib/api';
 import useAuthStore from '@/store/authStore';
+import PageLayout from '@/components/layout/PageLayout';
 import { 
   GraduationCap, 
   Mail, 
@@ -161,7 +162,8 @@ export default function RegisterTeacherPage() {
   const grades = ['4', '5', '6', '7', '8', '9', '10'];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center">
@@ -610,5 +612,6 @@ export default function RegisterTeacherPage() {
         </form>
       </div>
     </div>
+    </PageLayout>
   );
 }

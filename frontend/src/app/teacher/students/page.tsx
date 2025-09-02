@@ -27,6 +27,11 @@ interface Student {
     lastLogin?: string;
   };
   enrollmentDate: string;
+  enrolledClasses?: Array<{
+    _id: string;
+    title: string;
+    progress: number;
+  }>;
   progress: {
     percentageComplete: number;
     completedLessons: number;
@@ -40,7 +45,7 @@ interface Student {
   lastActivity?: string;
 }
 
-interface Course {
+interface Class {
   _id: string;
   title: string;
   enrolledStudents: any[];
@@ -48,83 +53,32 @@ interface Course {
 
 export default function TeacherStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     fetchData();
-  }, [selectedCourse]);
+  }, [selectedClass]);
 
   const fetchData = async () => {
     try {
-      // Fetch teacher's courses
-      const coursesResponse = await api.get('/courses/teacher');
-      setCourses(coursesResponse.data.data || []);
+      // Fetch teacher's classes
+      const classesResponse = await api.get('/classes/teacher');
+      setClasses(classesResponse.data.data || []);
 
-      // Fetch students based on selected course
+      // Fetch real students from the API
       let studentsData: Student[] = [];
-      if (selectedCourse === 'all') {
-        // Get all students from all courses
-        const allStudentIds = new Set<string>();
-        coursesResponse.data.data.forEach((course: Course) => {
-          course.enrolledStudents.forEach((studentId: string) => {
-            allStudentIds.add(studentId);
-          });
-        });
-        
-        // Mock student data for now
-        studentsData = Array.from(allStudentIds).map((id, index) => ({
-          _id: id,
-          user: {
-            _id: id,
-            name: `Student ${index + 1}`,
-            email: `student${index + 1}@demo.com`,
-            phone: `+1234567890${index}`,
-            lastLogin: new Date().toISOString()
-          },
-          enrollmentDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-          progress: {
-            percentageComplete: Math.floor(Math.random() * 100),
-            completedLessons: Math.floor(Math.random() * 20),
-            totalLessons: 20
-          },
-          assignments: {
-            submitted: Math.floor(Math.random() * 10),
-            graded: Math.floor(Math.random() * 8),
-            averageGrade: 70 + Math.floor(Math.random() * 30)
-          },
-          lastActivity: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
-        }));
+      if (selectedClass === 'all') {
+        // Get all students from all teacher's classes
+        const studentsResponse = await api.get('/enrollments/teacher/students');
+        studentsData = studentsResponse.data.data || [];
       } else {
-        // Get students from specific course
-        const course = courses.find(c => c._id === selectedCourse);
-        if (course) {
-          studentsData = course.enrolledStudents.map((studentId: string, index: number) => ({
-            _id: studentId,
-            user: {
-              _id: studentId,
-              name: `Student ${index + 1}`,
-              email: `student${index + 1}@demo.com`,
-              phone: `+1234567890${index}`,
-              lastLogin: new Date().toISOString()
-            },
-            enrollmentDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-            progress: {
-              percentageComplete: Math.floor(Math.random() * 100),
-              completedLessons: Math.floor(Math.random() * 20),
-              totalLessons: 20
-            },
-            assignments: {
-              submitted: Math.floor(Math.random() * 10),
-              graded: Math.floor(Math.random() * 8),
-              averageGrade: 70 + Math.floor(Math.random() * 30)
-            },
-            lastActivity: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
-          }));
-        }
+        // Get students from specific class
+        const studentsResponse = await api.get(`/enrollments/classes/${selectedClass}/students`);
+        studentsData = studentsResponse.data.data || [];
       }
       
       setStudents(studentsData);
@@ -242,14 +196,14 @@ export default function TeacherStudentsPage() {
             </div>
 
             <select
-              value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Courses</option>
-              {courses.map((course) => (
-                <option key={course._id} value={course._id}>
-                  {course.title}
+              <option value="all">All Classes</option>
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.title}
                 </option>
               ))}
             </select>
@@ -257,7 +211,7 @@ export default function TeacherStudentsPage() {
             <button
               onClick={() => {
                 setSearchTerm('');
-                setSelectedCourse('all');
+                setSelectedClass('all');
               }}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
             >
@@ -274,9 +228,9 @@ export default function TeacherStudentsPage() {
               No students found
             </h3>
             <p className="text-gray-600">
-              {searchTerm || selectedCourse !== 'all'
+              {searchTerm || selectedClass !== 'all'
                 ? "Try adjusting your filters"
-                : "No students enrolled in your courses yet"}
+                : "No students enrolled in your classes yet"}
             </p>
           </div>
         ) : (
@@ -419,7 +373,7 @@ export default function TeacherStudentsPage() {
                     <h3 className="font-semibold text-gray-900 mb-2">Academic Performance</h3>
                     <div className="space-y-2 text-sm">
                       <div>
-                        <span className="text-gray-600">Course Progress:</span>
+                        <span className="text-gray-600">Class Progress:</span>
                         <span className={`ml-2 font-semibold ${getProgressColor(selectedStudent.progress.percentageComplete)}`}>
                           {selectedStudent.progress.percentageComplete}%
                         </span>

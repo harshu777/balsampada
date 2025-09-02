@@ -3,6 +3,7 @@ const router = express.Router();
 const { body } = require('express-validator');
 const classController = require('../controllers/class.controller');
 const { protect, authorize, checkClassOwnership, optionalAuth } = require('../middleware/auth');
+const { setOrganizationContext } = require('../middleware/organization');
 
 const validateClass = [
   body('title').trim().notEmpty().withMessage('Title is required'),
@@ -12,22 +13,35 @@ const validateClass = [
   body('duration').isNumeric().withMessage('Duration is required')
 ];
 
-router.get('/', optionalAuth, classController.getClasses);
-router.get('/teacher', protect, authorize('teacher', 'admin'), classController.getTeacherClasses);
-router.get('/:id', optionalAuth, classController.getClass);
+// Public route - needs organization context if user is authenticated
+router.get('/', optionalAuth, async (req, res, next) => {
+  if (req.user) {
+    await setOrganizationContext(req, res, next);
+  } else {
+    next();
+  }
+}, classController.getClasses);
+router.get('/teacher', protect, setOrganizationContext, authorize('teacher', 'admin'), classController.getTeacherClasses);
+router.get('/:id', optionalAuth, async (req, res, next) => {
+  if (req.user) {
+    await setOrganizationContext(req, res, next);
+  } else {
+    next();
+  }
+}, classController.getClass);
 
-router.post('/', protect, authorize('teacher', 'admin'), validateClass, classController.createClass);
-router.put('/:id', protect, checkClassOwnership, classController.updateClass);
-router.delete('/:id', protect, checkClassOwnership, classController.deleteClass);
+router.post('/', protect, setOrganizationContext, authorize('teacher', 'admin'), validateClass, classController.createClass);
+router.put('/:id', protect, setOrganizationContext, checkClassOwnership, classController.updateClass);
+router.delete('/:id', protect, setOrganizationContext, checkClassOwnership, classController.deleteClass);
 
-router.put('/:id/publish', protect, checkClassOwnership, classController.publishClass);
+router.put('/:id/publish', protect, setOrganizationContext, checkClassOwnership, classController.publishClass);
 
-router.post('/:id/modules', protect, checkClassOwnership, classController.addModule);
-router.put('/:id/modules/:moduleId', protect, checkClassOwnership, classController.updateModule);
-router.delete('/:id/modules/:moduleId', protect, checkClassOwnership, classController.deleteModule);
+router.post('/:id/modules', protect, setOrganizationContext, checkClassOwnership, classController.addModule);
+router.put('/:id/modules/:moduleId', protect, setOrganizationContext, checkClassOwnership, classController.updateModule);
+router.delete('/:id/modules/:moduleId', protect, setOrganizationContext, checkClassOwnership, classController.deleteModule);
 
-router.post('/:id/modules/:moduleId/lessons', protect, checkClassOwnership, classController.addLesson);
+router.post('/:id/modules/:moduleId/lessons', protect, setOrganizationContext, checkClassOwnership, classController.addLesson);
 
-router.post('/:id/rate', protect, classController.rateClass);
+router.post('/:id/rate', protect, setOrganizationContext, classController.rateClass);
 
 module.exports = router;

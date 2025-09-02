@@ -18,14 +18,31 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please provide a password'],
+    required: function() {
+      // Password not required if user signed up with Google
+      return !this.googleId;
+    },
     minlength: 6,
     select: false
   },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  profileIncomplete: {
+    type: Boolean,
+    default: false
+  },
   role: {
     type: String,
-    enum: ['student', 'teacher', 'admin'],
+    enum: ['student', 'teacher', 'admin', 'owner'],
     default: 'student'
+  },
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: false // Will be required for non-owners
   },
   phone: {
     type: String,
@@ -68,6 +85,105 @@ const userSchema = new mongoose.Schema({
   emailVerificationExpire: Date,
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  // Academic Information (for both students and teachers)
+  academicProfile: {
+    // Student-specific
+    board: {
+      type: String,
+      enum: ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'NIOS', 'Other']
+    },
+    standard: {
+      type: String,
+      enum: ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th']
+    },
+    medium: {
+      type: String,
+      enum: ['English', 'Hindi', 'Regional', 'Bilingual']
+    },
+    school: String,
+    
+    // Parent Information (for students)
+    parentName: String,
+    parentPhone: String,
+    parentEmail: String,
+    
+    // Teacher-specific
+    canTeachBoards: [{
+      type: String,
+      enum: ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge', 'NIOS', 'Other']
+    }],
+    canTeachStandards: [{
+      type: String,
+      enum: ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th']
+    }],
+    canTeachSubjects: [{
+      subject: {
+        type: String,
+        enum: [
+          'Mathematics', 'Science', 'English', 'Hindi', 'Social Studies', 'Environmental Studies',
+          'Physics', 'Chemistry', 'Biology', 'Computer Science', 'History', 'Geography', 'Civics',
+          'Economics', 'Accountancy', 'Business Studies', 'Sanskrit', 'French', 'German',
+          'General Knowledge', 'Reasoning', 'Physical Education', 'Arts', 'Music', 'Other'
+        ]
+      },
+      isPrimary: {
+        type: Boolean,
+        default: false
+      },
+      experienceYears: {
+        type: Number,
+        default: 0
+      },
+      specialization: String
+    }],
+    
+    // Professional details for teachers
+    currentOccupation: String,
+    institutionAffiliation: String,
+    teachingExperience: {
+      type: Number,
+      default: 0
+    },
+    preferredTimings: [{
+      type: String,
+      enum: ['Morning', 'Afternoon', 'Evening', 'Weekend']
+    }],
+    availability: {
+      days: [{
+        type: String,
+        enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      }],
+      timeSlots: [{
+        start: String, // HH:MM format
+        end: String   // HH:MM format
+      }]
+    }
+  },
+
+  // Onboarding Status
+  onboardingStatus: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed', 'rejected'],
+    default: 'pending'
+  },
+  onboardingCompletedAt: Date,
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  approvedAt: Date,
+  
+  // Auto-assigned relationships
+  enrolledGrades: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Grade'
+  }],
+  assignedSubjects: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject'
+  }],
+  
+  // Legacy fields (keep for backward compatibility)
   enrolledClasses: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Enrollment'

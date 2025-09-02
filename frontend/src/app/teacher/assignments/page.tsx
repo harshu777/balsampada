@@ -23,12 +23,13 @@ interface Assignment {
   _id: string;
   title: string;
   description: string;
-  course: {
+  class?: {
     _id: string;
     title: string;
   };
   dueDate: string;
   totalMarks: number;
+  maxScore?: number;
   submissions: Array<{
     _id: string;
     student: {
@@ -40,6 +41,8 @@ interface Assignment {
     grade?: number;
   }>;
   createdAt: string;
+  visibility?: string;
+  specificStudents?: any[];
 }
 
 export default function TeacherAssignmentsPage() {
@@ -189,12 +192,12 @@ export default function TeacherAssignmentsPage() {
                             {assignment.title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {assignment.totalMarks} marks
+                            {assignment.totalMarks || assignment.maxScore || 0} marks
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {assignment.course.title}
+                        {assignment.class?.title || 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {formatDate(assignment.dueDate)}
@@ -263,7 +266,7 @@ export default function TeacherAssignmentsPage() {
                     <h2 className="text-2xl font-bold text-gray-900">
                       {selectedAssignment.title}
                     </h2>
-                    <p className="text-gray-600">{selectedAssignment.course.title}</p>
+                    <p className="text-gray-600">{selectedAssignment.class?.title || 'N/A'}</p>
                   </div>
                   <button
                     onClick={() => {
@@ -305,7 +308,7 @@ export default function TeacherAssignmentsPage() {
                               {submission.grade !== undefined ? (
                                 <div>
                                   <p className="text-lg font-semibold text-gray-900">
-                                    {submission.grade}/{selectedAssignment.totalMarks}
+                                    {submission.grade}/{selectedAssignment.totalMarks || selectedAssignment.maxScore || 0}
                                   </p>
                                   <span className="text-xs text-green-600">Graded</span>
                                 </div>
@@ -334,13 +337,13 @@ export default function TeacherAssignmentsPage() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Grade (out of {selectedAssignment.totalMarks})
+                          Grade (out of {selectedAssignment.totalMarks || selectedAssignment.maxScore || 0})
                         </label>
                         <input
                           type="number"
                           value={grade}
                           onChange={(e) => setGrade(e.target.value)}
-                          max={selectedAssignment.totalMarks}
+                          max={selectedAssignment.totalMarks || selectedAssignment.maxScore || 100}
                           min="0"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />

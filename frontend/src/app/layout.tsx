@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from 'react-hot-toast';
 import Providers from '@/components/Providers';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -31,6 +33,7 @@ export default function RootLayout({
               style: {
                 background: '#363636',
                 color: '#fff',
+                zIndex: 9999,
               },
               success: {
                 style: {

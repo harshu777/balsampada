@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -21,9 +21,12 @@ import {
   Video,
   PlusCircle,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  UserPlus
 } from 'lucide-react';
 import useAuthStore from '@/store/authStore';
+import useNotificationStore from '@/store/notificationStore';
+import Header from '@/components/layout/Header';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -60,9 +63,9 @@ const navigationItems: NavItem[] = [
   },
   {
     label: 'Schedule',
-    href: '/schedule',
+    href: '/unified-schedule',
     icon: Calendar,
-    roles: ['student', 'teacher']
+    roles: ['student', 'teacher', 'admin']
   },
   {
     label: 'My Classes',
@@ -89,6 +92,12 @@ const navigationItems: NavItem[] = [
     roles: ['teacher']
   },
   {
+    label: 'Groups',
+    href: '/teacher/groups',
+    icon: Users,
+    roles: ['teacher']
+  },
+  {
     label: 'Analytics',
     href: '/teacher/analytics',
     icon: BarChart,
@@ -101,9 +110,21 @@ const navigationItems: NavItem[] = [
     roles: ['admin']
   },
   {
+    label: 'Onboarding',
+    href: '/admin/onboarding',
+    icon: UserPlus,
+    roles: ['admin']
+  },
+  {
     label: 'Classes',
     href: '/admin/classes',
     icon: BookOpen,
+    roles: ['admin']
+  },
+  {
+    label: 'Grades & Subjects',
+    href: '/admin/grades',
+    icon: GraduationCap,
     roles: ['admin']
   },
   {
@@ -135,6 +156,23 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { loadNotifications, fetchLiveNotifications } = useNotificationStore();
+
+  useEffect(() => {
+    if (user?.role) {
+      // Initial load
+      loadNotifications(user.role);
+      
+      // Set up periodic refresh for live notifications (every 5 minutes)
+      const interval = setInterval(() => {
+        if (user.role === 'student') {
+          fetchLiveNotifications();
+        }
+      }, 5 * 60 * 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [user?.role]);
 
   const handleLogout = () => {
     logout();
@@ -146,23 +184,21 @@ export default function DashboardLayout({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen overflow-hidden">
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="flex flex-1 pt-24">
         <div
           className={cn(
-            'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+            'fixed top-24 bottom-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
           <div className="flex h-full flex-col">
-            <div className="flex h-16 items-center justify-between px-4 border-b">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold text-gray-900">Balsampada</span>
-              </Link>
+            <div className="flex h-16 items-center justify-between px-4 border-b lg:hidden">
+              <span className="text-lg font-semibold" style={{color: '#6C4225'}}>Menu</span>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="lg:hidden"
+                className="p-2"
               >
                 <X className="h-6 w-6 text-gray-500" />
               </button>
@@ -180,9 +216,13 @@ export default function DashboardLayout({
                     className={cn(
                       'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        ? ''
+                        : 'hover:bg-gray-100'
                     )}
+                    style={{
+                      backgroundColor: isActive ? '#82993D20' : 'transparent',
+                      color: isActive ? '#82993D' : '#6C4225'
+                    }}
                   >
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
@@ -204,47 +244,16 @@ export default function DashboardLayout({
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <header className="bg-white shadow-sm border-b">
-            <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="lg:hidden bg-white shadow-sm border-b">
+            <div className="flex h-16 items-center px-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden"
+                className="-m-2.5 p-2.5 text-gray-700"
               >
-                <Menu className="h-6 w-6 text-gray-500" />
+                <Menu className="h-6 w-6" />
               </button>
-
-              <div className="flex-1" />
-
-              <div className="flex items-center space-x-4">
-                <button className="relative p-2 text-gray-500 hover:text-gray-700">
-                  <Bell className="h-6 w-6" />
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500" />
-                </button>
-
-                <div className="flex items-center space-x-3">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">
-                      {user?.role}
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="h-10 w-10 rounded-full"
-                      />
-                    ) : (
-                      <User className="h-5 w-5 text-gray-500" />
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
-          </header>
+          </div>
 
           <main className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-8">
             {children}

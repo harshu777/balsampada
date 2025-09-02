@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Class = require('../models/Class');
 const Enrollment = require('../models/Enrollment');
+const Notification = require('../models/Notification');
 
 exports.getProfile = async (req, res) => {
   try {
@@ -107,7 +108,10 @@ exports.getStudentDashboard = async (req, res) => {
       enrollments,
       recentActivity,
       upcomingAssignments,
-      progress
+      progress,
+      pendingAssignmentsCount,
+      newMaterialsCount,
+      unreadNotificationsCount
     ] = await Promise.all([
       Enrollment.find({ student: userId, status: 'active' })
         .populate('class', 'title thumbnail teacher category')
@@ -121,7 +125,10 @@ exports.getStudentDashboard = async (req, res) => {
         .limit(6),
       getRecentActivity(userId),
       getUpcomingAssignments(userId),
-      getOverallProgress(userId)
+      getOverallProgress(userId),
+      getPendingAssignmentsCount(userId),
+      getNewMaterialsCount(userId),
+      getUnreadNotificationsCount(userId)
     ]);
 
     res.status(200).json({
@@ -130,7 +137,10 @@ exports.getStudentDashboard = async (req, res) => {
         enrollments,
         recentActivity,
         upcomingAssignments,
-        progress
+        progress,
+        pendingAssignmentsCount,
+        newMaterialsCount,
+        unreadNotificationsCount
       }
     });
   } catch (error) {
@@ -151,7 +161,10 @@ exports.getTeacherDashboard = async (req, res) => {
       totalStudents,
       recentSubmissions,
       upcomingClasses,
-      earnings
+      earnings,
+      studyMaterialsCount,
+      totalAssignments,
+      pendingPayments
     ] = await Promise.all([
       Class.find({ teacher: teacherId })
         .select('title enrolledStudents status averageRating')
@@ -159,7 +172,10 @@ exports.getTeacherDashboard = async (req, res) => {
       getTotalStudents(teacherId),
       getRecentSubmissions(teacherId),
       getUpcomingClasses(teacherId),
-      getTeacherEarnings(teacherId)
+      getTeacherEarnings(teacherId),
+      getStudyMaterialsCount(teacherId),
+      getTotalAssignments(teacherId),
+      getPendingPaymentsCount(teacherId)
     ]);
 
     res.status(200).json({
@@ -169,7 +185,10 @@ exports.getTeacherDashboard = async (req, res) => {
         totalStudents,
         recentSubmissions,
         upcomingClasses,
-        earnings
+        earnings,
+        studyMaterialsCount,
+        totalAssignments,
+        pendingPayments
       }
     });
   } catch (error) {
@@ -247,23 +266,31 @@ async function getTotalStudents(teacherId) {
 async function getRecentSubmissions(teacherId) {
   const Assignment = require('../models/Assignment');
   const assignments = await Assignment.find({ createdBy: teacherId })
-    .populate('submissions.student', 'name')
-    .sort('-submissions.submittedAt')
-    .limit(10);
+    .populate('submissions.student', 'name email')
+    .sort('-createdAt')
+    .limit(20);
 
   const recentSubmissions = [];
   assignments.forEach(assignment => {
     assignment.submissions.forEach(submission => {
-      if (submission.status === 'submitted' && !submission.grade) {
+      if (submission.status === 'submitted') {
         recentSubmissions.push({
+          assignmentId: assignment._id,
           assignmentTitle: assignment.title,
+          studentId: submission.student._id,
           studentName: submission.student.name,
-          submittedAt: submission.submittedAt
+          studentEmail: submission.student.email,
+          submittedAt: submission.submittedAt,
+          isGraded: !!submission.grade,
+          grade: submission.grade,
+          status: submission.grade ? 'graded' : 'pending_review'
         });
       }
     });
   });
 
+  // Sort by submission time and return latest 5
+  recentSubmissions.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
   return recentSubmissions.slice(0, 5);
 }
 
@@ -281,48 +308,156 @@ async function getUpcomingClasses(teacherId) {
 }
 
 async function getTeacherEarnings(teacherId) {
-  const Payment = require('../models/Payment');
-  const classes = await Class.find({ teacher: teacherId }).select('_id price');
+  const classes = await Class.find({ teacher: teacherId }).select('_id');
   const classIds = classes.map(c => c._id);
 
-  const payments = await Payment.aggregate([
-    { $match: { 
-      class: { $in: classIds },
-      status: 'completed'
-    }},
-    { $group: {
-      _id: null,
-      total: { $sum: '$amount' },
-      count: { $sum: 1 }
-    }}
-  ]);
+  const enrollments = await Enrollment.find({ 
+    class: { $in: classIds } 
+  }).populate('class', 'price');
 
-  const thisMonth = await Payment.aggregate([
-    { $match: { 
-      class: { $in: classIds },
-      status: 'completed',
-      createdAt: { 
-        $gte: new Date(new Date().setDate(1))
+  let total = 0;
+  let thisMonth = 0;
+  let totalTransactions = 0;
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  enrollments.forEach(enrollment => {
+    if (enrollment.payment && enrollment.payment.status === 'paid') {
+      const amount = enrollment.payment.amount || enrollment.class.price;
+      total += amount;
+      totalTransactions++;
+
+      const paymentDate = enrollment.payment.paymentDate || enrollment.createdAt;
+      const paymentMonth = new Date(paymentDate);
+      if (paymentMonth.getMonth() === currentMonth && paymentMonth.getFullYear() === currentYear) {
+        thisMonth += amount;
       }
-    }},
-    { $group: {
-      _id: null,
-      total: { $sum: '$amount' }
-    }}
-  ]);
+    }
+  });
 
   return {
-    total: payments[0]?.total || 0,
-    thisMonth: thisMonth[0]?.total || 0,
-    totalTransactions: payments[0]?.count || 0
+    total,
+    thisMonth,
+    totalTransactions
   };
+}
+
+async function getStudyMaterialsCount(teacherId) {
+  const StudyMaterial = require('../models/StudyMaterial');
+  const classes = await Class.find({ teacher: teacherId }).select('_id');
+  const classIds = classes.map(c => c._id);
+  
+  const count = await StudyMaterial.countDocuments({ 
+    class: { $in: classIds } 
+  });
+  
+  return count;
+}
+
+async function getTotalAssignments(teacherId) {
+  const Assignment = require('../models/Assignment');
+  const count = await Assignment.countDocuments({ createdBy: teacherId });
+  return count;
+}
+
+async function getPendingPaymentsCount(teacherId) {
+  const classes = await Class.find({ teacher: teacherId }).select('_id');
+  const classIds = classes.map(c => c._id);
+
+  const count = await Enrollment.countDocuments({
+    class: { $in: classIds },
+    'payment.status': 'pending'
+  });
+
+  return count;
+}
+
+async function getPendingAssignmentsCount(userId) {
+  const Assignment = require('../models/Assignment');
+  const enrollments = await Enrollment.find({ student: userId, status: 'active' }).select('class');
+  const classIds = enrollments.map(e => e.class);
+  
+  const assignments = await Assignment.find({
+    class: { $in: classIds },
+    isPublished: true,
+    dueDate: { $gte: new Date() }
+  });
+  
+  let pendingCount = 0;
+  assignments.forEach(assignment => {
+    const submission = assignment.submissions.find(s => 
+      s.student && s.student.toString() === userId.toString()
+    );
+    if (!submission || submission.status !== 'submitted') {
+      pendingCount++;
+    }
+  });
+  
+  return pendingCount;
+}
+
+async function getNewMaterialsCount(userId) {
+  const StudyMaterial = require('../models/StudyMaterial');
+  const enrollments = await Enrollment.find({ student: userId, status: 'active' }).select('class');
+  const classIds = enrollments.map(e => e.class);
+  
+  // Consider materials uploaded in last 7 days as "new"
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const count = await StudyMaterial.countDocuments({
+    class: { $in: classIds },
+    uploadedAt: { $gte: sevenDaysAgo }
+  });
+  
+  return count;
+}
+
+async function getUnreadNotificationsCount(userId) {
+  const count = await Notification.countDocuments({
+    recipient: userId,
+    isRead: false
+  });
+  
+  return count;
 }
 
 exports.getNotifications = async (req, res) => {
   try {
+    const { page = 1, limit = 10, unreadOnly = false } = req.query;
+    const userId = req.user.id;
+
+    const filter = { recipient: userId };
+    if (unreadOnly === 'true') {
+      filter.isRead = false;
+    }
+
+    const notifications = await Notification.find(filter)
+      .populate('sender', 'name avatar')
+      .populate('data.classId', 'title')
+      .populate('data.assignmentId', 'title')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const totalNotifications = await Notification.countDocuments(filter);
+    const unreadCount = await Notification.countDocuments({ 
+      recipient: userId, 
+      isRead: false 
+    });
+
     res.status(200).json({
       success: true,
-      data: []
+      data: {
+        notifications,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalNotifications / limit),
+          totalNotifications,
+          hasNextPage: page * limit < totalNotifications
+        },
+        unreadCount
+      }
     });
   } catch (error) {
     console.error('Get notifications error:', error);
@@ -335,9 +470,26 @@ exports.getNotifications = async (req, res) => {
 
 exports.markNotificationRead = async (req, res) => {
   try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, recipient: userId },
+      { isRead: true },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Notification marked as read'
+      message: 'Notification marked as read',
+      data: notification
     });
   } catch (error) {
     console.error('Mark notification error:', error);

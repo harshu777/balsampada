@@ -20,6 +20,12 @@ interface FormData {
   price: number;
   discountPrice: number;
   duration: number;
+  startDate: string;
+  endDate: string;
+  schedule: string;
+  meetingLink: string;
+  classesPerWeek: number;
+  classDuration: number;
   maxStudents: number;
   prerequisites: string;
   learningOutcomes: string;
@@ -45,6 +51,12 @@ export default function EditClassPage() {
     price: 0,
     discountPrice: 0,
     duration: 0,
+    startDate: '',
+    endDate: '',
+    schedule: '',
+    meetingLink: '',
+    classesPerWeek: 3,
+    classDuration: 90,
     maxStudents: 0,
     prerequisites: '',
     learningOutcomes: '',
@@ -55,6 +67,16 @@ export default function EditClassPage() {
   useEffect(() => {
     fetchClassData();
   }, [params.id]);
+
+  // Calculate end date based on start date and duration
+  useEffect(() => {
+    if (formData.startDate && formData.duration) {
+      const start = new Date(formData.startDate);
+      const end = new Date(start);
+      end.setDate(end.getDate() + (formData.duration * 7)); // duration is in weeks
+      setFormData(prev => ({ ...prev, endDate: end.toISOString().split('T')[0] }));
+    }
+  }, [formData.startDate, formData.duration]);
 
   const fetchClassData = async () => {
     try {
@@ -75,6 +97,12 @@ export default function EditClassPage() {
         price: classData.price || 0,
         discountPrice: classData.discountPrice || 0,
         duration: classData.duration || 0,
+        startDate: classData.startDate ? new Date(classData.startDate).toISOString().split('T')[0] : '',
+        endDate: classData.endDate ? new Date(classData.endDate).toISOString().split('T')[0] : '',
+        schedule: classData.schedule || '',
+        meetingLink: classData.meetingLink || '',
+        classesPerWeek: classData.classesPerWeek || 3,
+        classDuration: classData.classDuration || 90,
         maxStudents: classData.maxStudents || 0,
         prerequisites: classData.prerequisites?.join(', ') || '',
         learningOutcomes: classData.learningObjectives?.join(', ') || '',
@@ -346,7 +374,7 @@ export default function EditClassPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Duration (hours) *
+                  Duration (weeks) *
                 </label>
                 <input
                   type="number"
@@ -357,6 +385,40 @@ export default function EditClassPage() {
                   min="1"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  required
+                  min={new Date().toISOString().split('T')[0]}
+                  max={`${new Date().getFullYear()}-12-31`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  End Date (Duration in months)
+                </label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  min={formData.startDate || new Date().toISOString().split('T')[0]}
+                  max={`${new Date().getFullYear()}-12-31`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Select the end date for your course duration (e.g., 5 months from start)
+                </p>
               </div>
 
               <div>
@@ -372,6 +434,23 @@ export default function EditClassPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Leave 0 for unlimited"
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Google Meet Link
+                </label>
+                <input
+                  type="text"
+                  name="meetingLink"
+                  value={formData.meetingLink}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter your Google Meet link for online classes
+                </p>
               </div>
             </div>
           </div>

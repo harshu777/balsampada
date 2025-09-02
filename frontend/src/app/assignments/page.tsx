@@ -15,24 +15,33 @@ import {
   AlertCircle,
   Upload,
   Download,
-  Eye
+  Eye,
+  Users,
+  Bell
 } from 'lucide-react';
 
 interface Assignment {
   _id: string;
   title: string;
   description: string;
-  course: {
+  class: {
     _id: string;
     title: string;
-    teacher: {
-      name: string;
-    };
+  };
+  createdBy?: {
+    name: string;
   };
   dueDate: string;
   totalMarks: number;
+  maxScore?: number;
   instructions: string;
   attachments?: string[];
+  visibility?: 'enrolled' | 'specific';
+  isGroupAssignment?: boolean;
+  groupName?: string;
+  hasSubmitted?: boolean;
+  submissionStatus?: string;
+  grade?: any;
   submissions?: {
     _id: string;
     submittedAt: string;
@@ -104,6 +113,11 @@ export default function StudentAssignmentsPage() {
   };
 
   const getStatus = (assignment: Assignment) => {
+    // Check the hasSubmitted and submissionStatus fields from the API
+    if (assignment.hasSubmitted && assignment.submissionStatus) {
+      return assignment.submissionStatus;
+    }
+    // Fallback to checking submissions array
     if (!assignment.submissions || assignment.submissions.length === 0) {
       return 'pending';
     }
@@ -255,10 +269,16 @@ export default function StudentAssignmentsPage() {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {assignment.title}
                         </h3>
+                        {assignment.visibility === 'specific' && (
+                          <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full flex items-center">
+                            <Users className="h-3 w-3 mr-1" />
+                            {assignment.groupName || 'Group Assignment'}
+                          </span>
+                        )}
                         {getStatusBadge(status)}
                       </div>
                       <p className="text-sm text-gray-600 mb-2">
-                        {assignment.course.title} • {assignment.course.teacher.name}
+                        {assignment.class?.title || 'Class'} • {assignment.createdBy?.name || 'Teacher'}
                       </p>
                       <p className="text-gray-700 mb-3">
                         {assignment.description}
@@ -273,7 +293,7 @@ export default function StudentAssignmentsPage() {
                           {daysUntilDue > 0 ? `${daysUntilDue} days left` : 'Overdue'}
                         </span>
                         <span className="flex items-center">
-                          Total Marks: {assignment.totalMarks}
+                          Total Marks: {assignment.totalMarks || assignment.maxScore || 0}
                         </span>
                       </div>
                     </div>
@@ -289,7 +309,7 @@ export default function StudentAssignmentsPage() {
                           </p>
                           {submission.grade !== undefined && (
                             <p className="text-lg font-semibold text-gray-900 mt-1">
-                              Grade: {submission.grade}/{assignment.totalMarks}
+                              Grade: {submission.grade}/{assignment.totalMarks || assignment.maxScore || 0}
                             </p>
                           )}
                           {submission.feedback && (

@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const liveClassSchema = new mongoose.Schema({
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: true,
+    index: true
+  },
   title: {
     type: String,
     required: [true, 'Please provide a title for the live class'],
@@ -10,10 +16,21 @@ const liveClassSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide a description']
   },
+  // Support both old Class model and new Grade/Subject structure
   class: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Class',
-    required: true
+    required: false // Made optional for new structure
+  },
+  grade: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Grade',
+    required: false
+  },
+  subject: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject',
+    required: false
   },
   teacher: {
     type: mongoose.Schema.Types.ObjectId,
@@ -106,7 +123,7 @@ const liveClassSchema = new mongoose.Schema({
 });
 
 // Indexes
-liveClassSchema.index({ course: 1, scheduledAt: 1 });
+liveClassSchema.index({ class: 1, scheduledAt: 1 });
 liveClassSchema.index({ teacher: 1, status: 1 });
 liveClassSchema.index({ scheduledAt: 1, status: 1 });
 
@@ -186,9 +203,20 @@ liveClassSchema.methods.removeAttendee = async function(studentId) {
   return this;
 };
 
-// Pre-save hook to update updatedAt
+// Pre-save hook to update updatedAt and validate structure
 liveClassSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  
+  // Validate that either old structure (class) or new structure (grade + subject) is provided
+  if (!this.class && !(this.grade && this.subject)) {
+    return next(new Error('Either class OR both grade and subject must be provided'));
+  }
+  
+  // Don't allow both old and new structure
+  if (this.class && (this.grade || this.subject)) {
+    return next(new Error('Cannot use both old (class) and new (grade+subject) structure together'));
+  }
+  
   next();
 });
 
