@@ -11,7 +11,15 @@ require('dotenv').config();
 // Import passport configuration
 const passport = require('./config/passport');
 
-const authRoutes = require('./routes/auth.routes');
+// Use enhanced auth routes if available, otherwise fall back to original
+let authRoutes;
+try {
+  authRoutes = require('./routes/auth.routes.enhanced');
+  console.log('✅ Using enhanced JWT authentication');
+} catch (error) {
+  authRoutes = require('./routes/auth.routes');
+  console.log('⚠️  Using standard authentication');
+}
 const userRoutes = require('./routes/user.routes');
 const classRoutes = require('./routes/class.routes');
 const enrollmentRoutes = require('./routes/enrollment.routes');
