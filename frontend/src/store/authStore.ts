@@ -101,9 +101,16 @@ const useAuthStore = create<AuthState>()(
               isAuthenticated: true 
             });
             
-            const response = await api.get('/auth/me');
-            set({ user: response.data.data });
+            // Only validate token if not on auth pages
+            const currentPath = window.location.pathname;
+            const authPaths = ['/login', '/register', '/register-student', '/register-teacher'];
+            
+            if (!authPaths.some(path => currentPath.includes(path))) {
+              const response = await api.get('/auth/me');
+              set({ user: response.data.data });
+            }
           } catch (error) {
+            console.error('Auth check failed:', error);
             Cookies.remove('token');
             Cookies.remove('user');
             set({ 
@@ -112,6 +119,12 @@ const useAuthStore = create<AuthState>()(
               isAuthenticated: false 
             });
           }
+        } else {
+          set({ 
+            user: null, 
+            token: null, 
+            isAuthenticated: false 
+          });
         }
       }
     }),

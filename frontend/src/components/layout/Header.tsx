@@ -45,9 +45,14 @@ export default function Header() {
   useEffect(() => {
     // Load notifications when user is authenticated
     if (isAuthenticated && user?.role) {
-      loadNotifications(user.role);
+      // Wrap in try-catch to prevent errors from breaking the app
+      try {
+        loadNotifications(user.role);
+      } catch (error) {
+        console.error('Failed to load notifications:', error);
+      }
     }
-  }, [isAuthenticated, user?.role]);
+  }, [isAuthenticated, user?.role, loadNotifications]);
 
   const handleLogout = () => {
     logout();

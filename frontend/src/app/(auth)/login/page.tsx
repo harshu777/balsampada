@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -34,9 +34,10 @@ type FormData = yup.InferType<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, isAuthenticated, user } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin'>('student');
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   const {
     register,
@@ -46,6 +47,16 @@ export default function LoginPage() {
   } = useForm<FormData>({
     resolver: yupResolver(schema),
   });
+
+  // Check if already authenticated and redirect
+  useEffect(() => {
+    if (!hasCheckedAuth) {
+      setHasCheckedAuth(true);
+      if (isAuthenticated && user) {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthenticated, user, router, hasCheckedAuth]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -58,9 +69,9 @@ export default function LoginPage() {
   };
 
   const demoCredentials = {
-    student: { email: 'student@demo.com', password: 'Demo@123' },
-    teacher: { email: 'teacher@demo.com', password: 'Demo@123' },
-    admin: { email: 'admin@balsampada.com', password: 'Admin@123' }
+    student: { email: 'harsh@student.com', password: 'harsh123' },
+    teacher: { email: 'sonal@teacher.com', password: 'sonal123' },
+    admin: { email: 'admin@balsampada.com', password: 'admin123' }
   };
 
   const fillDemoCredentials = (role: 'student' | 'teacher' | 'admin') => {

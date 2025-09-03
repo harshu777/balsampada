@@ -72,6 +72,9 @@ const useNotificationStore = create<NotificationStore>((set) => ({
     // For students, fetch real enrollment and class data
     if (role === 'student') {
       try {
+        // Skip loading if no role provided
+        if (!role) return;
+        
         // Fetch enrollments to get upcoming classes
         const enrollmentResponse = await api.get('/enrollments/my-enrollments');
         const enrollments = enrollmentResponse.data.data || [];

@@ -28,10 +28,20 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      Cookies.remove('token');
-      Cookies.remove('user');
-      window.location.href = '/login';
-      toast.error('Session expired. Please login again.');
+      // Only redirect if not already on login or register pages
+      const currentPath = window.location.pathname;
+      const authPaths = ['/login', '/register', '/register-student', '/register-teacher', '/clear-auth'];
+      
+      if (!authPaths.some(path => currentPath.includes(path))) {
+        Cookies.remove('token');
+        Cookies.remove('user');
+        // Clear local storage auth data
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth-storage');
+        }
+        toast.error('Session expired. Please login again.');
+        window.location.href = '/login';
+      }
     }
     // Don't show toast here, let the component handle it
     return Promise.reject(error);
