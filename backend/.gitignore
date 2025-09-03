@@ -13,3 +13,12 @@ coverage/
 *.swp
 *.swo
 *~
+
+# Database backups and exports
+database-backups/
+database-exports/
+database-backup-*/
+*.bson
+*.metadata.json
+*.tar.gz
+*.dump
