@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Build outputs
+.next/
+*/.next/
+dist/
+*/dist/
+build/
+*/build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+README.md
+
+# Testing
+coverage/
+.nyc_output/
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Scripts
+scripts/test-*
+scripts/check-*
+scripts/verify-*
+
+# Misc
+.eslintrc*
+.prettierrc*
+.editorconfig
+LICENSE
