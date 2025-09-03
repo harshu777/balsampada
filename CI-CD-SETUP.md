@@ -15,8 +15,8 @@ This guide will help you set up the complete CI/CD pipeline for your containeriz
 1. Go to [Docker Hub](https://hub.docker.com)
 2. Sign up for a free account
 3. Create two repositories:
-   - `yourusername/balsampada-backend`
-   - `yourusername/balsampada-frontend`
+   - `harsh1106/balsampada-backend` ✅ 
+   - `harsh1106/balsampada-frontend` ✅
 
 ### Step 2: Configure GitHub Secrets
 
@@ -26,8 +26,8 @@ Add these secrets:
 
 #### Docker Hub Secrets (Required)
 ```
-DOCKER_USERNAME: your-dockerhub-username
-DOCKER_PASSWORD: your-dockerhub-password
+DOCKER_USERNAME: harsh1106
+DOCKER_PASSWORD: your-dockerhub-password-or-access-token
 ```
 
 #### Server Secrets (For Deployment)
@@ -105,7 +105,7 @@ services:
       - app-network
 
   backend:
-    image: ${BACKEND_IMAGE:-yourusername/balsampada-backend:latest}
+    image: ${BACKEND_IMAGE:-harsh1106/balsampada-backend:latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -120,7 +120,7 @@ services:
       - app-network
 
   frontend:
-    image: ${FRONTEND_IMAGE:-yourusername/balsampada-frontend:latest}
+    image: ${FRONTEND_IMAGE:-harsh1106/balsampada-frontend:latest}
     restart: unless-stopped
     ports:
       - "80:3000"
@@ -260,8 +260,8 @@ cd /var/www/balsampada
 
 # Rollback to previous version
 docker-compose down
-export BACKEND_IMAGE=yourusername/balsampada-backend:previous-tag
-export FRONTEND_IMAGE=yourusername/balsampada-frontend:previous-tag
+export BACKEND_IMAGE=harsh1106/balsampada-backend:previous-tag
+export FRONTEND_IMAGE=harsh1106/balsampada-frontend:previous-tag
 docker-compose up -d
 
 # Restore database if needed
