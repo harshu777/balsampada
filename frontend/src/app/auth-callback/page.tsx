@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useAuthStore from '@/store/authStore';
 import toast from 'react-hot-toast';
+import Cookies from 'js-cookie';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setUser } = useAuthStore();
+  const { updateUser } = useAuthStore();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -26,8 +27,8 @@ export default function AuthCallbackPage() {
         const base64Payload = token.split('.')[1];
         const payload = JSON.parse(atob(base64Payload));
         
-        // Store token and user data
-        localStorage.setItem('token', token);
+        // Store token in cookies
+        Cookies.set('token', token, { expires: 7 });
         
         // Fetch user details
         fetchUserDetails(token);
@@ -39,7 +40,7 @@ export default function AuthCallbackPage() {
     } else {
       router.push('/login');
     }
-  }, [searchParams, router, setUser]);
+  }, [searchParams, router]);
 
   const fetchUserDetails = async (token: string) => {
     try {
@@ -52,8 +53,8 @@ export default function AuthCallbackPage() {
       const result = await response.json();
 
       if (result.success) {
-        localStorage.setItem('user', JSON.stringify(result.user));
-        setUser(result.user);
+        Cookies.set('user', JSON.stringify(result.user), { expires: 7 });
+        updateUser(result.user);
         
         // Check if profile is incomplete
         if (result.user.profileIncomplete) {
@@ -78,5 +79,20 @@ export default function AuthCallbackPage() {
         <p className="mt-4 text-gray-600">Authenticating...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

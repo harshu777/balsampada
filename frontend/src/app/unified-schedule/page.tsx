@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
@@ -91,7 +91,7 @@ interface ScheduleEvent {
   recurringPattern?: string;
 }
 
-export default function UnifiedSchedulePage() {
+function UnifiedScheduleContent() {
   const { user, isAuthenticated, checkAuth } = useAuthStore();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -407,10 +407,10 @@ export default function UnifiedSchedulePage() {
   };
 
   const selectAllClasses = () => {
-    const userId = user?.id || user?._id;
+    const userId = user?.id;
     const teacherScheduledClasses = events.filter(e => {
       if (e.type !== 'live_class' || e.status !== 'scheduled') return false;
-      const teacherId = e.teacher?._id || e.teacher?.id || e.teacher;
+      const teacherId = e.teacher?._id || e.teacher;
       return String(teacherId) === String(userId);
     }).map(e => e._id);
     
@@ -627,7 +627,7 @@ export default function UnifiedSchedulePage() {
             console.log('Edit button check:', {
               eventTeacherId: event.teacher._id || event.teacher,
               userId: user.id,
-              userIdAlt: user._id,
+              // userIdAlt: user.id, // User doesn't have _id property
               eventStatus: event.status,
               isOwner: String(event.teacher._id || event.teacher) === String(user.id),
               canEdit: (String(event.teacher._id || event.teacher) === String(user.id)) && event.status === 'scheduled'
@@ -687,8 +687,8 @@ export default function UnifiedSchedulePage() {
                   }
                   
                   // Try multiple ways to match the teacher ID
-                  const teacherId = event.teacher?._id || event.teacher?.id || event.teacher;
-                  const userId = user?.id || user?._id;
+                  const teacherId = event.teacher?._id || event.teacher;
+                  const userId = user?.id;
                   const isOwner = String(teacherId) === String(userId);
                   
                   console.log(`Checkbox for ${event.title}:`, {
@@ -771,11 +771,9 @@ export default function UnifiedSchedulePage() {
               )}
               
               {/* Edit/Delete buttons for teachers */}
-              {user?.role === 'teacher' && (
-                String(event.teacher._id || event.teacher) === String(user.id) || 
-                event.teacher._id === user._id ||
-                event.teacher === user.id
-              ) && event.status === 'scheduled' && (
+              {user?.role === 'teacher' && 
+                String(event.teacher._id || event.teacher) === String(user.id) && 
+                event.status === 'scheduled' && (
                 <>
                   <button 
                     onClick={() => handleEditClass(event)}
@@ -794,11 +792,9 @@ export default function UnifiedSchedulePage() {
               )}
               
               {/* View button for non-owners */}
-              {!(user?.role === 'teacher' && (
-                String(event.teacher._id || event.teacher) === String(user.id) || 
-                event.teacher._id === user._id ||
-                event.teacher === user.id
-              ) && event.status === 'scheduled') && (
+              {!(user?.role === 'teacher' && 
+                String(event.teacher._id || event.teacher) === String(user.id) && 
+                event.status === 'scheduled') && (
                 <button className="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-gray-200 transition-colors">
                   <Eye className="w-4 h-4" />
                   View
@@ -1198,5 +1194,20 @@ export default function UnifiedSchedulePage() {
       )}
     </div>
     </DashboardLayout>
+  );
+}
+
+export default function UnifiedSchedulePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading schedule...</p>
+        </div>
+      </div>
+    }>
+      <UnifiedScheduleContent />
+    </Suspense>
   );
 }

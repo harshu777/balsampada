@@ -33,11 +33,11 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    phone: user?.phone || '',
-    bio: user?.bio || '',
-    qualification: user?.qualification || '',
-    experience: user?.experience || 0,
-    specialization: user?.specialization || []
+    phone: (user as any)?.phone || '',
+    bio: (user as any)?.bio || '',
+    qualification: (user as any)?.qualification || '',
+    experience: (user as any)?.experience || 0,
+    specialization: (user as any)?.specialization || []
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -169,7 +169,7 @@ export default function ProfilePage() {
               <h2 className="text-2xl font-bold text-gray-900">{user?.name}</h2>
               <p className="text-gray-600">{user?.email}</p>
               <p className="text-sm text-gray-500 capitalize mt-1">
-                {user?.role} • Member since {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
+                {user?.role} • Member since {(user as any)?.createdAt ? formatDate((user as any).createdAt) : 'N/A'}
               </p>
             </div>
 

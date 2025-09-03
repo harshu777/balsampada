@@ -200,7 +200,7 @@ export default function OnboardingManagementPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              delay={0.1}
+              transition={{ delay: 0.1 }}
               className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500"
             >
               <div className="flex items-center justify-between">
@@ -216,7 +216,7 @@ export default function OnboardingManagementPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              delay={0.2}
+              transition={{ delay: 0.2 }}
               className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500"
             >
               <div className="flex items-center justify-between">
@@ -232,7 +232,7 @@ export default function OnboardingManagementPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              delay={0.3}
+              transition={{ delay: 0.3 }}
               className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500"
             >
               <div className="flex items-center justify-between">

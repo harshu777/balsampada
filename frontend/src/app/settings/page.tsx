@@ -93,7 +93,7 @@ export default function SettingsPage() {
     e.preventDefault();
     // Password change disabled for local development
     // In production, this would call the API to update password
-    toast.info('Password change is disabled in local development mode');
+    toast('Password change is disabled in local development mode', { icon: 'ℹ️' });
     console.log('[LOCAL DEV] Password change requested but disabled for local development');
   };
 

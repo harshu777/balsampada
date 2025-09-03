@@ -267,7 +267,7 @@ export default function Home() {
                 {/* Search Bar */}
                 <motion.div 
                   className="bg-white/80 backdrop-blur-lg rounded-4xl shadow-soft-2xl p-3 mb-10 border border-white/40"
-                  whileHover={{ shadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)" }}
+                  whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15)" }}
                   transition={{ duration: 0.3 }}
                 >
                   <div className="flex items-center">
@@ -533,7 +533,7 @@ export default function Home() {
                       
                       {/* Boards Available */}
                       <div className="flex flex-wrap gap-1 mb-3">
-                        {classItem.boards.map((board, i) => (
+                        {classItem.boards.map((board: string, i: number) => (
                           <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                             {board}
                           </span>
@@ -545,7 +545,7 @@ export default function Home() {
                       
                       {/* Features */}
                       <div className="space-y-1 mb-3">
-                        {classItem.features.slice(0, 2).map((feature, i) => (
+                        {classItem.features.slice(0, 2).map((feature: string, i: number) => (
                           <div key={i} className="flex items-center text-xs text-gray-500">
                             <CheckIcon className="w-3 h-3 mr-1" style={{color: '#82993D'}} />
                             <span>{feature}</span>

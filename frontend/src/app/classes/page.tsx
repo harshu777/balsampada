@@ -173,7 +173,7 @@ export default function ClassesPage() {
                 <input
                   type="text"
                   placeholder="Search classes, teachers, or subjects..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" style={{borderColor: '#AC6CA150'}}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -183,7 +183,7 @@ export default function ClassesPage() {
             {/* Filters */}
             <div className="flex gap-2">
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" style={{borderColor: '#AC6CA150'}}
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
@@ -194,7 +194,7 @@ export default function ClassesPage() {
               </select>
 
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" style={{borderColor: '#AC6CA150'}}
                 value={selectedBoard}
                 onChange={(e) => setSelectedBoard(e.target.value)}
               >
@@ -205,7 +205,7 @@ export default function ClassesPage() {
               </select>
 
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" style={{borderColor: '#AC6CA150'}}
                 value={selectedStandard}
                 onChange={(e) => setSelectedStandard(e.target.value)}
               >
@@ -216,7 +216,7 @@ export default function ClassesPage() {
               </select>
 
               <select
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2" style={{borderColor: '#AC6CA150', focusBorderColor: '#AC6CA1'}}
+                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500" style={{borderColor: '#AC6CA150'}}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >

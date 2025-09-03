@@ -191,8 +191,9 @@ export default function ClassDetailsPage() {
       
       // If class is not published, show additional help
       if (errorMessage.includes('not yet published')) {
-        toast.info('Classes must be published by the teacher before enrollment.', {
-          duration: 5000
+        toast('Classes must be published by the teacher before enrollment.', {
+          duration: 5000,
+          icon: 'ℹ️'
         });
       }
     } finally {

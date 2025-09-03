@@ -51,7 +51,7 @@ export default function TeacherGroupsPage() {
     name: '',
     description: '',
     classId: '',
-    type: 'custom' as const,
+    type: 'custom' as 'performance' | 'project' | 'study' | 'custom',
     color: '#3B82F6',
     students: [] as string[]
   });

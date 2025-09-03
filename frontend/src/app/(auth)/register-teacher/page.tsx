@@ -64,7 +64,7 @@ const schema = yup.object({
 
 export default function RegisterTeacherPage() {
   const router = useRouter();
-  const { setAuth } = useAuthStore();
+  const { register: registerUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [selectedBoards, setSelectedBoards] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
@@ -119,15 +119,10 @@ export default function RegisterTeacherPage() {
         }
       };
 
-      const response = await api.post('/auth/register', teacherData);
+      await registerUser(teacherData);
       
-      if (response.data.success) {
-        const { token, user } = response.data;
-        setAuth(token, user);
-        
-        // Redirect to teacher dashboard
-        router.push('/dashboard');
-      }
+      // Redirect to teacher dashboard after successful registration
+      router.push('/dashboard');
     } catch (error: any) {
       console.error('Registration error:', error);
       alert(error.response?.data?.message || 'Registration failed');

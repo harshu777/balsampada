@@ -177,7 +177,7 @@ export default function StudyMaterialsPage() {
     if (material.type === 'video' || material.type === 'link') {
       window.open(material.fileUrl, '_blank');
     } else {
-      toast.info('Opening viewer...');
+      toast('Opening viewer...', { icon: 'ℹ️' });
     }
   };
 

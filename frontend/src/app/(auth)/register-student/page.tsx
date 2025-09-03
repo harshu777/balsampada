@@ -22,14 +22,13 @@ const schema = yup.object({
   
   // Academic Details
   board: yup.string().required('Please select board'),
-  standard: yup.string().required('Please select standard/class'),
-  medium: yup.string().required('Please select medium'),
+  grade: yup.string().required('Please select grade/class'),
   school: yup.string().required('School name is required'),
   
   // Parent Details
   parentName: yup.string().required('Parent name is required'),
   parentPhone: yup.string().matches(/^[0-9]{10}$/, 'Phone number must be 10 digits').required('Parent phone is required'),
-  parentEmail: yup.string().email('Invalid email'),
+  parentEmail: yup.string().email('Invalid email').nullable().default(''),
   
   // Address
   address: yup.string().required('Address is required'),
@@ -97,7 +96,7 @@ export default function StudentRegistrationPage() {
     if (!board) return [];
     
     return board.subjects.filter(subject => {
-      if (!subject.grades) return true;
+      if (!('grades' in subject) || !subject.grades) return true;
       return subject.grades.includes(watchGrade);
     });
   };

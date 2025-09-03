@@ -251,7 +251,7 @@ export default function StudentDashboard() {
       
       console.log('Live classes from API (already filtered by backend):', allLiveClasses.length);
       if (allLiveClasses.length > 0) {
-        console.log('Sample live classes:', allLiveClasses.slice(0, 3).map(lc => ({
+        console.log('Sample live classes:', allLiveClasses.slice(0, 3).map((lc: any) => ({
           title: lc.title,
           class: lc.class?.title,
           status: lc.status,
@@ -262,13 +262,13 @@ export default function StudentDashboard() {
       // Sort by scheduled time and filter upcoming/live classes
       const now = new Date();
       const upcomingLiveClasses = allLiveClasses
-        .filter(lc => lc.status === 'scheduled' || lc.status === 'live')
-        .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+        .filter((lc: any) => lc.status === 'scheduled' || lc.status === 'live')
+        .sort((a: any, b: any) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
         .slice(0, 5); // Show next 5 classes
       
       console.log('Final upcoming live classes:', upcomingLiveClasses.length);
       if (upcomingLiveClasses.length > 0) {
-        console.log('Upcoming classes to display:', upcomingLiveClasses.map(lc => lc.title));
+        console.log('Upcoming classes to display:', upcomingLiveClasses.map((lc: any) => lc.title));
       }
       
       setUpcomingClasses(upcomingLiveClasses);
@@ -290,8 +290,8 @@ export default function StudentDashboard() {
       // Fetch study materials for enrolled classes
       if (enrollmentsData.length > 0) {
         const materialsPromises = enrollmentsData
-          .filter(e => e.class && e.class._id)
-          .map(enrollment => 
+          .filter((e: any) => e.class && e.class._id)
+          .map((enrollment: any) => 
             api.get(`/study-materials/class/${enrollment.class._id}`)
               .catch(() => ({ data: { data: [] } }))
           );
@@ -367,12 +367,12 @@ export default function StudentDashboard() {
         if (now <= classEndTime) {
           liveClasses.push({
             _id: `live-${enrollment._id}-today`,
-            classId: enrollment.class._id,
+            class: enrollment.class,
             title: enrollment.class.title || 'Untitled Class',
-            teacher: enrollment.class.teacher?.name || 'Teacher',
-            startTime: classStartTime.toISOString(),
+            teacher: enrollment.class.teacher || { _id: 'unknown', name: 'Teacher' },
+            scheduledAt: classStartTime.toISOString(),
             duration: enrollment.class.duration || 60,
-            meetingLink: enrollment.class.meetingLink,
+            meetingId: enrollment.class.meetingLink,
             status: now >= classStartTime && now <= classEndTime ? 'live' : 'scheduled'
           });
         }
@@ -389,19 +389,19 @@ export default function StudentDashboard() {
         
         liveClasses.push({
           _id: `live-${enrollment._id}-tomorrow`,
-          classId: enrollment.class._id,
+          class: enrollment.class,
           title: enrollment.class.title || 'Untitled Class',
-          teacher: enrollment.class.teacher?.name || 'Teacher',
-          startTime: classStartTime.toISOString(),
+          teacher: enrollment.class.teacher || { _id: 'unknown', name: 'Teacher' },
+          scheduledAt: classStartTime.toISOString(),
           duration: enrollment.class.duration || 60,
-          meetingLink: enrollment.class.meetingLink,
+          meetingId: enrollment.class.meetingLink,
           status: 'scheduled'
         });
       }
     });
     
     // Sort by start time and limit to 3
-    liveClasses.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    liveClasses.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
     setUpcomingClasses(liveClasses.slice(0, 3));
   };
 
@@ -480,9 +480,9 @@ export default function StudentDashboard() {
             // Use percentageComplete if available, otherwise default to 0
             if (e.progress?.percentageComplete !== undefined) {
               return sum + e.progress.percentageComplete;
-            } else if (e.progress?.lessonsCompleted && e.progress?.totalLessons > 0) {
+            } else if (e.progress?.completedLessons?.length && (e.progress as any)?.totalLessons > 0) {
               // Calculate percentage from lessons if available
-              return sum + (e.progress.lessonsCompleted / e.progress.totalLessons) * 100;
+              return sum + (e.progress.completedLessons.length / (e.progress as any).totalLessons) * 100;
             }
             return sum;
           }, 0) / enrollments.length

@@ -82,7 +82,7 @@ export default function DashboardPage() {
       {(selectedView === 'student' || (!isMasterAccount && user.role === 'student')) && <StudentDashboard />}
       {(selectedView === 'teacher' || (!isMasterAccount && user.role === 'teacher')) && <TeacherDashboard />}
       {(selectedView === 'admin' || (!isMasterAccount && user.role === 'admin')) && <AdminDashboard />}
-      {(selectedView === 'owner' || (!isMasterAccount && user.role === 'owner')) && <OwnerDashboard />}
+      {selectedView === 'owner' && <OwnerDashboard />}
     </DashboardLayout>
   );
 }

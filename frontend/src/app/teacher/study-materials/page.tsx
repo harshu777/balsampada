@@ -91,11 +91,11 @@ export default function TeacherStudyMaterialsPage() {
       let filtered = materials;
       
       if (filterType !== 'all') {
-        filtered = filtered.filter(m => m.type === filterType);
+        filtered = filtered.filter((m: any) => m.type === filterType);
       }
       
       if (filterClass !== 'all') {
-        filtered = filtered.filter(m => m.class._id === filterClass);
+        filtered = filtered.filter((m: any) => m.class._id === filterClass);
       }
       
       setMaterials(filtered);

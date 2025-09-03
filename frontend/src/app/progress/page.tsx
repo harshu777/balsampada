@@ -59,7 +59,10 @@ export default function ProgressPage() {
     totalAssignments: 0,
     completedAssignments: 0,
     averageGrade: 0,
-    attendanceRate: 0
+    attendanceRate: 0,
+    totalHoursStudied: 0,
+    completedCourses: 0,
+    currentStreak: 0
   });
 
   useEffect(() => {
@@ -125,10 +128,13 @@ export default function ProgressPage() {
       setOverallStats({
         totalClasses: overallData.totalClasses || 0,
         averageProgress: overallData.averageProgress || 0,
+        totalAssignments: overallData.totalAssignments || 0,
+        completedAssignments: overallData.completedAssignments || 0,
+        averageGrade: overallData.averageGrade || 0,
+        attendanceRate: overallData.attendanceRate || 0,
         totalHoursStudied: Math.floor(overallData.totalTimeSpent / 60) || 0,
         completedCourses: overallData.completedClasses || 0,
-        currentStreak: 0, // This could be calculated based on daily activity
-        averageGrade: overallData.averageGrade || 0
+        currentStreak: 0 // This could be calculated based on daily activity
       });
 
       // Generate dynamic achievements based on real progress data

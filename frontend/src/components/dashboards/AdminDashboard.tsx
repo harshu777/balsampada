@@ -89,11 +89,11 @@ export default function AdminDashboard() {
                     <div className="text-2xl font-semibold text-gray-900">
                       {stats?.overview.totalStudents || 0}
                     </div>
-                    {stats?.growthRate.students !== 0 && (
+                    {(stats?.growthRate?.students || 0) !== 0 && (
                       <span className={`ml-2 text-sm font-semibold ${
-                        stats.growthRate.students > 0 ? 'text-green-600' : 'text-red-600'
+                        (stats?.growthRate?.students || 0) > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {stats.growthRate.students > 0 ? '+' : ''}{stats.growthRate.students}%
+                        {(stats?.growthRate?.students || 0) > 0 ? '+' : ''}{stats?.growthRate?.students}%
                       </span>
                     )}
                   </dd>
@@ -118,11 +118,11 @@ export default function AdminDashboard() {
                     <div className="text-2xl font-semibold text-gray-900">
                       {stats?.overview.totalClasses || 0}
                     </div>
-                    {stats?.growthRate.classes !== 0 && (
+                    {(stats?.growthRate?.classes || 0) !== 0 && (
                       <span className={`ml-2 text-sm font-semibold ${
-                        stats.growthRate.classes > 0 ? 'text-green-600' : 'text-red-600'
+                        (stats?.growthRate?.classes || 0) > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {stats.growthRate.classes > 0 ? '+' : ''}{stats.growthRate.classes}%
+                        {(stats?.growthRate?.classes || 0) > 0 ? '+' : ''}{stats?.growthRate?.classes}%
                       </span>
                     )}
                   </dd>
@@ -147,11 +147,11 @@ export default function AdminDashboard() {
                     <div className="text-2xl font-semibold text-gray-900">
                       {formatCurrency(stats?.overview.totalRevenue || 0)}
                     </div>
-                    {stats?.growthRate.revenue !== 0 && (
+                    {(stats?.growthRate?.revenue || 0) !== 0 && (
                       <span className={`ml-2 text-sm font-semibold ${
-                        stats.growthRate.revenue > 0 ? 'text-green-600' : 'text-red-600'
+                        (stats?.growthRate?.revenue || 0) > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {stats.growthRate.revenue > 0 ? '+' : ''}{stats.growthRate.revenue}%
+                        {(stats?.growthRate?.revenue || 0) > 0 ? '+' : ''}{stats?.growthRate?.revenue}%
                       </span>
                     )}
                   </dd>
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {stats?.overview.pendingClasses > 0 && (
+      {(stats?.overview?.pendingClasses || 0) > 0 && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                You have <span className="font-medium">{stats.overview.pendingClasses} classes</span> pending approval.
+                You have <span className="font-medium">{stats?.overview?.pendingClasses || 0} classes</span> pending approval.
                 <Link href="/admin/classes" className="ml-2 font-medium underline text-yellow-700 hover:text-yellow-600">
                   Review now
                 </Link>
