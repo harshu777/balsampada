@@ -31,38 +31,35 @@ const onTokenRefreshed = (token: string) => {
 // Helper to get access token
 const getAccessToken = (): string | null => {
   // Try to get from cookie first (if httpOnly is false)
-  let token: string | null = Cookies.get('accessToken') || null;
+  const cookieToken = Cookies.get('accessToken');
+  if (cookieToken) return cookieToken;
   
   // Fallback to localStorage if needed
-  if (!token && typeof window !== 'undefined') {
+  if (typeof window !== 'undefined') {
     const storageToken = localStorage.getItem('accessToken');
-    if (storageToken) {
-      token = storageToken;
-    }
+    if (storageToken) return storageToken;
   }
   
   // Fallback to old token cookie for backward compatibility
-  if (!token) {
-    token = Cookies.get('token') || null;
-  }
+  const oldToken = Cookies.get('token');
+  if (oldToken) return oldToken;
   
-  return token;
+  return null;
 };
 
 // Helper to get refresh token
 const getRefreshToken = (): string | null => {
   // Try cookie first
-  let token: string | null = Cookies.get('refreshToken') || null;
+  const cookieToken = Cookies.get('refreshToken');
+  if (cookieToken) return cookieToken;
   
   // Fallback to localStorage
-  if (!token && typeof window !== 'undefined') {
+  if (typeof window !== 'undefined') {
     const storageToken = localStorage.getItem('refreshToken');
-    if (storageToken) {
-      token = storageToken;
-    }
+    if (storageToken) return storageToken;
   }
   
-  return token;
+  return null;
 };
 
 // Helper to save tokens
