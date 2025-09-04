@@ -96,13 +96,6 @@ jobs:
             echo "No jest config found, skipping tests"
           fi
 
-      - name: Debug - Check api.enhanced.ts content
-        run: |
-          echo "Checking api.enhanced.ts line 38..."
-          sed -n '36,41p' frontend/src/lib/api.enhanced.ts
-          echo "---"
-          grep -n "localStorage.getItem" frontend/src/lib/api.enhanced.ts || true
-
       - name: Build frontend
         working-directory: ./frontend
         env:
