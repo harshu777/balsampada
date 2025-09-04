@@ -1,11 +1,11 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Create axios instance
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -31,16 +31,16 @@ const onTokenRefreshed = (token: string) => {
 // Helper to get access token
 const getAccessToken = (): string | null => {
   // Try to get from cookie first (if httpOnly is false)
-  let token = Cookies.get('accessToken');
+  let token = Cookies.get('accessToken') || null;
   
   // Fallback to localStorage if needed
   if (!token && typeof window !== 'undefined') {
-    token = localStorage.getItem('accessToken') || null;
+    token = localStorage.getItem('accessToken');
   }
   
   // Fallback to old token cookie for backward compatibility
   if (!token) {
-    token = Cookies.get('token');
+    token = Cookies.get('token') || null;
   }
   
   return token;
@@ -49,11 +49,11 @@ const getAccessToken = (): string | null => {
 // Helper to get refresh token
 const getRefreshToken = (): string | null => {
   // Try cookie first
-  let token = Cookies.get('refreshToken');
+  let token = Cookies.get('refreshToken') || null;
   
   // Fallback to localStorage
   if (!token && typeof window !== 'undefined') {
-    token = localStorage.getItem('refreshToken') || null;
+    token = localStorage.getItem('refreshToken');
   }
   
   return token;
@@ -216,10 +216,20 @@ api.interceptors.response.use(
   }
 );
 
+// Type for the enhanced API
+interface EnhancedAPI extends AxiosInstance {
+  login: (email: string, password: string) => Promise<any>;
+  logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
+  getSessions: () => Promise<any>;
+  revokeSession: (sessionId: string) => Promise<any>;
+  refreshAccessToken: () => Promise<any>;
+  isAuthenticated: () => boolean;
+  clearAuth: () => void;
+}
+
 // Enhanced API methods with better error handling
-const enhancedApi = {
-  ...api,
-  
+const enhancedApi: EnhancedAPI = Object.assign(api, {
   // Login method that handles the new token structure
   login: async (email: string, password: string) => {
     try {
@@ -304,7 +314,7 @@ const enhancedApi = {
   clearAuth: () => {
     clearTokens();
   }
-};
+});
 
 export default enhancedApi;
 export { getAccessToken, getRefreshToken, saveTokens, clearTokens };
