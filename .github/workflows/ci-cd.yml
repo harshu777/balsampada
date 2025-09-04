@@ -97,7 +97,11 @@ jobs:
         working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5000/api
-        run: npm run build
+        run: |
+          echo "Building frontend..."
+          # Clear any potential cache
+          rm -rf .next
+          npm run build
 
   # ==========================================
   # Build and Push Docker Images
