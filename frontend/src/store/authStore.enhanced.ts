@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import Cookies from 'js-cookie';
-import api from '@/lib/api.enhanced';
+import api from '@/lib/apiClient';
 
 interface User {
   id: string;

@@ -46,6 +46,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -93,6 +96,13 @@ jobs:
             echo "No jest config found, skipping tests"
           fi
 
+      - name: Debug - Check api.enhanced.ts content
+        run: |
+          echo "Checking api.enhanced.ts line 38..."
+          sed -n '36,41p' frontend/src/lib/api.enhanced.ts
+          echo "---"
+          grep -n "localStorage.getItem" frontend/src/lib/api.enhanced.ts || true
+
       - name: Build frontend
         working-directory: ./frontend
         env:
@@ -101,6 +111,7 @@ jobs:
           echo "Building frontend..."
           # Clear any potential cache
           rm -rf .next
+          rm -rf node_modules/.cache
           npm run build
 
   # ==========================================
@@ -115,6 +126,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          clean: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -186,6 +200,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          clean: true
 
       - name: Deploy to Staging Server
         uses: appleboy/ssh-action@v0.1.5
@@ -228,6 +245,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          clean: true
 
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v0.1.5
@@ -284,6 +304,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          clean: true
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
