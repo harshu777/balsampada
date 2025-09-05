@@ -101,7 +101,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5000/api
         run: |
-          echo "Building frontend..."
+          echo "Building frontend with apiClient.ts..."
           # Clear any potential cache
           rm -rf .next
           rm -rf node_modules/.cache
